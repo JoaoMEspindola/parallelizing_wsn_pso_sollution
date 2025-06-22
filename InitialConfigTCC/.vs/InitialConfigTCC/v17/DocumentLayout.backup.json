@@ -1,0 +1,126 @@
+{
+  "Version": 1,
+  "WorkspaceRootPath": "C:\\Users\\jpmar\\source\\repos\\InitialConfigTCC\\",
+  "Documents": [
+    {
+      "AbsoluteMoniker": "D:0:0:{D8C9C0EA-5BBB-4CCB-AA85-4769B24F9862}|InitialConfigTCC.vcxproj|C:\\Users\\jpmar\\source\\repos\\InitialConfigTCC\\network.hpp||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}",
+      "RelativeMoniker": "D:0:0:{D8C9C0EA-5BBB-4CCB-AA85-4769B24F9862}|InitialConfigTCC.vcxproj|solutionrelative:network.hpp||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{D8C9C0EA-5BBB-4CCB-AA85-4769B24F9862}|InitialConfigTCC.vcxproj|C:\\Users\\jpmar\\source\\repos\\InitialConfigTCC\\routing_pso.hpp||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}",
+      "RelativeMoniker": "D:0:0:{D8C9C0EA-5BBB-4CCB-AA85-4769B24F9862}|InitialConfigTCC.vcxproj|solutionrelative:routing_pso.hpp||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{D8C9C0EA-5BBB-4CCB-AA85-4769B24F9862}|InitialConfigTCC.vcxproj|C:\\Users\\jpmar\\source\\repos\\InitialConfigTCC\\clustering_pso.hpp||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}",
+      "RelativeMoniker": "D:0:0:{D8C9C0EA-5BBB-4CCB-AA85-4769B24F9862}|InitialConfigTCC.vcxproj|solutionrelative:clustering_pso.hpp||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{D8C9C0EA-5BBB-4CCB-AA85-4769B24F9862}|InitialConfigTCC.vcxproj|C:\\Users\\jpmar\\source\\repos\\InitialConfigTCC\\cluster_radius.hpp||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}",
+      "RelativeMoniker": "D:0:0:{D8C9C0EA-5BBB-4CCB-AA85-4769B24F9862}|InitialConfigTCC.vcxproj|solutionrelative:cluster_radius.hpp||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{D8C9C0EA-5BBB-4CCB-AA85-4769B24F9862}|InitialConfigTCC.vcxproj|C:\\Users\\jpmar\\source\\repos\\InitialConfigTCC\\main.cpp||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}",
+      "RelativeMoniker": "D:0:0:{D8C9C0EA-5BBB-4CCB-AA85-4769B24F9862}|InitialConfigTCC.vcxproj|solutionrelative:main.cpp||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{D8C9C0EA-5BBB-4CCB-AA85-4769B24F9862}|InitialConfigTCC.vcxproj|C:\\Users\\jpmar\\source\\repos\\InitialConfigTCC\\export.cpp||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}",
+      "RelativeMoniker": "D:0:0:{D8C9C0EA-5BBB-4CCB-AA85-4769B24F9862}|InitialConfigTCC.vcxproj|solutionrelative:export.cpp||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}"
+    }
+  ],
+  "DocumentGroupContainers": [
+    {
+      "Orientation": 0,
+      "VerticalTabListWidth": 100,
+      "DocumentGroups": [
+        {
+          "DockedWidth": 200,
+          "SelectedChildIndex": 4,
+          "Children": [
+            {
+              "$type": "Bookmark",
+              "Name": "ST:0:0:{40ea2e6b-2121-4bb8-a43e-c83c04b51041}"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 1,
+              "Title": "routing_pso.hpp",
+              "DocumentMoniker": "C:\\Users\\jpmar\\source\\repos\\InitialConfigTCC\\routing_pso.hpp",
+              "RelativeDocumentMoniker": "routing_pso.hpp",
+              "ToolTip": "C:\\Users\\jpmar\\source\\repos\\InitialConfigTCC\\routing_pso.hpp",
+              "RelativeToolTip": "routing_pso.hpp",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000680|",
+              "WhenOpened": "2025-06-22T22:47:15.073Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 2,
+              "Title": "clustering_pso.hpp",
+              "DocumentMoniker": "C:\\Users\\jpmar\\source\\repos\\InitialConfigTCC\\clustering_pso.hpp",
+              "RelativeDocumentMoniker": "clustering_pso.hpp",
+              "ToolTip": "C:\\Users\\jpmar\\source\\repos\\InitialConfigTCC\\clustering_pso.hpp",
+              "RelativeToolTip": "clustering_pso.hpp",
+              "ViewState": "AgIAAHgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000680|",
+              "WhenOpened": "2025-06-22T22:46:57.972Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 3,
+              "Title": "cluster_radius.hpp",
+              "DocumentMoniker": "C:\\Users\\jpmar\\source\\repos\\InitialConfigTCC\\cluster_radius.hpp",
+              "RelativeDocumentMoniker": "cluster_radius.hpp",
+              "ToolTip": "C:\\Users\\jpmar\\source\\repos\\InitialConfigTCC\\cluster_radius.hpp",
+              "RelativeToolTip": "cluster_radius.hpp",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000680|",
+              "WhenOpened": "2025-06-22T22:46:54.181Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 0,
+              "Title": "network.hpp",
+              "DocumentMoniker": "C:\\Users\\jpmar\\source\\repos\\InitialConfigTCC\\network.hpp",
+              "RelativeDocumentMoniker": "network.hpp",
+              "ToolTip": "C:\\Users\\jpmar\\source\\repos\\InitialConfigTCC\\network.hpp",
+              "RelativeToolTip": "network.hpp",
+              "ViewState": "AgIAABgAAAAAAAAAAAAAAB4AAAAvAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000680|",
+              "WhenOpened": "2025-06-22T17:24:30.973Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 5,
+              "Title": "export.cpp",
+              "DocumentMoniker": "C:\\Users\\jpmar\\source\\repos\\InitialConfigTCC\\export.cpp",
+              "RelativeDocumentMoniker": "export.cpp",
+              "ToolTip": "C:\\Users\\jpmar\\source\\repos\\InitialConfigTCC\\export.cpp",
+              "RelativeToolTip": "export.cpp",
+              "ViewState": "AgIAAC0AAAAAAAAAAAAiwFoAAAABAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000677|",
+              "WhenOpened": "2025-06-22T16:58:30.492Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 4,
+              "Title": "main.cpp",
+              "DocumentMoniker": "C:\\Users\\jpmar\\source\\repos\\InitialConfigTCC\\main.cpp",
+              "RelativeDocumentMoniker": "main.cpp",
+              "ToolTip": "C:\\Users\\jpmar\\source\\repos\\InitialConfigTCC\\main.cpp",
+              "RelativeToolTip": "main.cpp",
+              "ViewState": "AgIAAAUAAAAAAAAAAAAAAAsAAAAZAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000677|",
+              "WhenOpened": "2025-06-22T16:57:51.743Z",
+              "EditorCaption": ""
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
