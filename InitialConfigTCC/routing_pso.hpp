@@ -92,13 +92,7 @@ private:
     }
 
     double evaluate(const Particle& p) { // avalia a partícula e retorna a fitness (vida útil aproximada)
-  //      if (p.position.empty()) return 0.0; // Partícula vazia
-  //      if (std::any_of(p.position.begin(), p.position.end(), [](double v) { return v < 0.0 || v > 1.0; })) {
-  //          return 0.0; // Posição inválida
-  //      }
-  //      if (std::all_of(p.position.begin(), p.position.end(), [](double v) { return v == 0.0; })) {
-  //          return 0.0; // Todos os gateways com probabilidade zero
-		//}
+
 		auto nextHop = decodeParticle(p.position); //pode ser paralelizado (1 thread por gateway)
         std::vector<double> approxLifetime(numGateways);
 

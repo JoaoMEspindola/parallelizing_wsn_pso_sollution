@@ -9,7 +9,7 @@
 
 int main() {
     // === PARÂMETROS INICIAIS ===
-    int numSensors = 300;
+    int numSensors = 600;
     int numGateways = 60;
     double areaWidth = 500.0, areaHeight = 500.0;
 
@@ -23,6 +23,28 @@ int main() {
     // === PSO DE ROTEAMENTO ===
     RoutingPSO rPSO(net, 50, 100); // 50 partículas, 100 iterações
     std::vector<int> nextHop = rPSO.optimizeRouting();
+
+    for (int g = 0; g < net.numGateways; ++g) {
+        int nh = nextHop[g];
+        if (nh == -1) {
+            double d = distance(net.nodes[g].x, net.nodes[g].y, net.bs.x, net.bs.y);
+            if (d > net.gatewayRange) {
+                std::cerr << "[Erro] Gateway " << g
+                    << " com nextHop = BS mas dist = " << d
+                    << " > gatewayRange\n";
+            }
+        }
+        else if (nh >= 0) {
+            double dij = distance(net.nodes[g].x, net.nodes[g].y,
+                net.nodes[nh].x, net.nodes[nh].y);
+            if (dij > net.gatewayRange) {
+                std::cerr << "[Erro] Gateway " << g
+                    << " roteado para " << nh
+                    << " mas dij = " << dij
+                    << " > gatewayRange\n";
+            }
+        }
+    }
 
     exportNextHops(nextHop, "nextHop.csv");
 

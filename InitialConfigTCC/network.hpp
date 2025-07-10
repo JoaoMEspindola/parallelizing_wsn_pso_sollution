@@ -57,21 +57,28 @@ public:
         }
     }
 
-	std::vector<int> getNextHopCandidates(int gatewayId) const { // Retorna candidatos a próximo salto para um gateway específico
+    std::vector<int> getNextHopCandidates(int gatewayId) const {
         const Node& g = nodes[gatewayId];
         std::vector<int> candidates;
-        for (int j : g.neighbors) {
-            if (!nodes[j].isGateway) continue; // ignorar sensores
-            if (distance(nodes[j].x, nodes[j].y, bs.x, bs.y) <= distance(g.x, g.y, bs.x, bs.y)) {
+        double dist_i_bs = distance(g.x, g.y, bs.x, bs.y);
+
+        // 1) Gateway → Gateway: só outros gateways dentro de gatewayRange e com distância até BS <= do próprio
+        for (int j = 0; j < numGateways; ++j) {
+            if (j == gatewayId) continue;
+            const Node& neighbor = nodes[j];
+            double dij = distance(g.x, g.y, neighbor.x, neighbor.y);
+            double dist_j_bs = distance(neighbor.x, neighbor.y, bs.x, bs.y);
+            if (dij <= gatewayRange && dist_j_bs <= dist_i_bs) {
                 candidates.push_back(j);
             }
         }
-        // também permitir a base station como próximo salto, se estiver ao alcance
-        if (distance(g.x, g.y, bs.x, bs.y) <= gatewayRange) {
-            candidates.push_back(-1); // -1 representa a base station
+        // 2) Gateway → BS direto: somente se dentro de gatewayRange
+        if (dist_i_bs <= gatewayRange) {
+            candidates.push_back(-1); // -1 indica BS
         }
         return candidates;
     }
+
 
     void printSummary() {
         std::cout << "Total Nodes: " << nodes.size() << "\n";
