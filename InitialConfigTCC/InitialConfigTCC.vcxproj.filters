@@ -42,10 +42,39 @@
     <ClInclude Include="export.cpp">
       <Filter>Arquivos de Origem</Filter>
     </ClInclude>
+    <ClInclude Include="routing_pso_cuda.hpp">
+      <Filter>Arquivos de Cabeçalho</Filter>
+    </ClInclude>
+    <ClInclude Include="compact_graph.hpp">
+      <Filter>Arquivos de Cabeçalho</Filter>
+    </ClInclude>
+    <ClInclude Include="clustering_pso_cuda.hpp">
+      <Filter>Arquivos de Cabeçalho</Filter>
+    </ClInclude>
+    <ClInclude Include="node_gpu.hpp">
+      <Filter>Arquivos de Cabeçalho</Filter>
+    </ClInclude>
+    <ClInclude Include="cuda_common_kernels.hpp">
+      <Filter>Arquivos de Cabeçalho</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp">
       <Filter>Arquivos de Origem</Filter>
     </ClCompile>
+    <ClCompile Include="utils.cpp">
+      <Filter>Arquivos de Origem</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <CudaCompile Include="routing_pso_cuda.cu">
+      <Filter>Arquivos de Origem</Filter>
+    </CudaCompile>
+    <CudaCompile Include="clustering_pso_cuda.cu">
+      <Filter>Arquivos de Origem</Filter>
+    </CudaCompile>
+    <CudaCompile Include="cuda_common_kernels.cu">
+      <Filter>Arquivos de Origem</Filter>
+    </CudaCompile>
   </ItemGroup>
 </Project>

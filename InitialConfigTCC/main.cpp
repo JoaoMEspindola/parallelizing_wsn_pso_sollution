@@ -1,79 +1,144 @@
-#include <iostream>
+Ôªø#include <iostream>
+#include <fstream>
+#include <chrono>
 #include <string>
+
 #include "network.hpp"
 #include "routing_pso.hpp"
 #include "cluster_radius.hpp"
 #include "clustering_pso.hpp"
 #include "simulation.hpp"
+#include "utils.hpp"
 #include "export.cpp"
+#ifdef USE_CUDA
+#include "routing_pso_cuda.hpp"
+#include "clustering_pso_cuda.hpp"
+#endif
 
+// ======================================================
+// === Fun√ß√£o auxiliar: medir tempo de execu√ß√£o ========
+// ======================================================
+template<typename Func>
+double measureTime(Func&& func) {
+    auto start = std::chrono::high_resolution_clock::now();
+    func();
+    auto end = std::chrono::high_resolution_clock::now();
+    return std::chrono::duration<double>(end - start).count();
+}
+
+// ======================================================
+// === Fun√ß√£o principal ================================
+// ======================================================
 int main() {
-    // === PAR¬METROS INICIAIS ===
-    int numSensors = 600;
-    int numGateways = 60;
-    double areaWidth = 500.0, areaHeight = 500.0;
+    // === PAR√ÇMETROS BASEADOS NO ARTIGO ===
+    const int numSensors = 600;
+    const int numGateways = 60;
+    const double areaWidth = 500.0, areaHeight = 500.0;
+    const int swarmSize = 50;
+    const int iterations = 100;
 
-    // === GERAR REDE ===
+    // === GERA REDE ===
     Network net(numSensors, numGateways, areaWidth, areaHeight);
     net.generate();
     exportNetworkAndLinksToCSV(net, "network_full.csv");
 
-    std::cout << "Rede gerada com " << numSensors << " sensores e " << numGateways << " gateways.\n";
+    std::cout << "Rede gerada com " << numSensors << " sensores e "
+        << numGateways << " gateways.\n";
 
-    // === PSO DE ROTEAMENTO ===
-    RoutingPSO rPSO(net, 50, 100); // 50 partÌculas, 100 iteraÁıes
-    std::vector<int> nextHop = rPSO.optimizeRouting();
+    std::ofstream csv("speedup_summary.csv");
+    csv << "Stage,CPU_Time(s),GPU_Time(s),Speedup\n";
 
-    for (int g = 0; g < net.numGateways; ++g) {
-        int nh = nextHop[g];
-        if (nh == -1) {
-            double d = distance(net.nodes[g].x, net.nodes[g].y, net.bs.x, net.bs.y);
-            if (d > net.gatewayRange) {
-                std::cerr << "[Erro] Gateway " << g
-                    << " com nextHop = BS mas dist = " << d
-                    << " > gatewayRange\n";
-            }
-        }
-        else if (nh >= 0) {
-            double dij = distance(net.nodes[g].x, net.nodes[g].y,
-                net.nodes[nh].x, net.nodes[nh].y);
-            if (dij > net.gatewayRange) {
-                std::cerr << "[Erro] Gateway " << g
-                    << " roteado para " << nh
-                    << " mas dij = " << dij
-                    << " > gatewayRange\n";
-            }
-        }
-    }
+    // ======================================================
+    // === ROTEAMENTO (CPU e GPU) ===========================
+    // ======================================================
+    std::cout << "\n========== ROTEAMENTO ==========\n";
 
-    exportNextHops(nextHop, "nextHop.csv");
+    std::vector<int> nextHopCPU;
+    std::vector<int> nextHopGPU;
+    std::vector<double> approxLifetimeCPU;
+    std::vector<double> approxLifetimeGPU;
 
-    std::vector<double> approxLifetime = rPSO.getApproxLifetime();
+    double cpuTime_r = measureTime([&]() {
+        RoutingPSO rPSO_cpu(net, swarmSize, iterations);
+        nextHopCPU = rPSO_cpu.optimizeRouting();
+        approxLifetimeCPU = rPSO_cpu.getApproxLifetime();
+        });
 
-    std::cout << "\nRoteamento otimizado (nextHop):\n";
-    for (int i = 0; i < nextHop.size(); ++i) {
-        std::cout << "Gateway " << i << " -> "
-            << (nextHop[i] == -1 ? "BS" : std::to_string(nextHop[i])) << "\n";
-    }
+#ifdef USE_CUDA
+    double gpuTime_r = measureTime([&]() {
+        RoutingPSO_CUDA rPSO_gpu(net, swarmSize, iterations);
+        rPSO_gpu.run();
+        nextHopGPU = rPSO_gpu.decodeRoutingGBestToNextHop();
+        approxLifetimeGPU = rPSO_gpu.getApproxLifetime();
+        });
 
-    // === C¡LCULO DOS RAIO DE CLUSTER DESIGUAIS ===
-    std::vector<double> clusterRadii = computeClusterRadii(approxLifetime, 80.0);
+    double speedup_r = cpuTime_r / gpuTime_r;
+    csv << "Routing," << cpuTime_r << "," << gpuTime_r << "," << speedup_r << "\n";
 
-    // === PSO DE CLUSTERIZA«√O ===
-    ClusteringPSO cPSO(net, nextHop, clusterRadii, 50, 100);
-    std::vector<int> sensorAssignment = cPSO.optimizeClustering();
+    std::cout << "[Routing PSO] CPU: " << cpuTime_r << "s | GPU: " << gpuTime_r
+        << "s | Speedup = " << speedup_r << "x\n";
+#else
+    csv << "Routing," << cpuTime_r << ",-,-\n";
+    std::cout << "[Routing PSO] CPU: " << cpuTime_r << "s\n";
+#endif
 
-    std::cout << "\nAtribuiÁ„o de sensores:\n";
-    for (int i = 0; i < sensorAssignment.size(); ++i) {
-        std::cout << "Sensor " << i << " -> Gateway " << sensorAssignment[i] << "\n";
-    }
+    // ======================================================
+    // === CLUSTERIZA√á√ÉO (CPU e GPU) ========================
+    // ======================================================
+    std::cout << "\n========== CLUSTERIZA√á√ÉO ==========\n";
 
-    // === SIMULA«√O DA REDE ===
-    std::cout << "\nIniciando simulaÁ„o...\n";
-    Simulation sim(net, nextHop, sensorAssignment, 1.0); // Threshold_Energy = 1.0 J
-    sim.run(1000); // atÈ 1000 rodadas
+    std::vector<int> sensorAssignmentCPU;
+    std::vector<int> sensorAssignmentGPU;
+    std::vector<double> clusterRadiiCPU = computeClusterRadii(approxLifetimeCPU, 80.0);
+#ifdef USE_CUDA
+    std::vector<double> clusterRadiiGPU = computeClusterRadii(approxLifetimeGPU, 80.0);
+#endif
 
+    double cpuTime_c = measureTime([&]() {
+        ClusteringPSO cPSO_cpu(net, nextHopCPU, clusterRadiiCPU, swarmSize, iterations);
+        sensorAssignmentCPU = cPSO_cpu.optimizeClustering();
+        });
 
+#ifdef USE_CUDA
+    double gpuTime_c = measureTime([&]() {
+        ClusteringPSO_CUDA cPSO_gpu(net, nextHopGPU, clusterRadiiGPU, swarmSize, iterations);
+        cPSO_gpu.run();
+        std::vector<double> gbestVecGPU = cPSO_gpu.getGBestHost();
+        sensorAssignmentGPU = decodeClusteringGBestToAssignment(gbestVecGPU, net, nextHopGPU, clusterRadiiGPU);
+        });
 
+    double speedup_c = cpuTime_c / gpuTime_c;
+    csv << "Clustering," << cpuTime_c << "," << gpuTime_c << "," << speedup_c << "\n";
+    std::cout << "[Clustering PSO] CPU: " << cpuTime_c << "s | GPU: " << gpuTime_c
+        << "s | Speedup = " << speedup_c << "x\n";
+#else
+    csv << "Clustering," << cpuTime_c << ",-,-\n";
+    std::cout << "[Clustering PSO] CPU: " << cpuTime_c << "s\n";
+#endif
+
+    csv.close();
+    std::cout << "\n[Export] speedup_summary.csv salvo com sucesso!\n";
+
+    // ======================================================
+    // === SIMULA√á√ÉO CPU vs GPU =============================
+    // ======================================================
+    std::cout << "\n========== SIMULA√á√ÉO ==========\n";
+
+    Network netCPU = net;
+#ifdef USE_CUDA
+    Network netGPU = net;
+#endif
+
+    std::cout << "\n[Simula√ß√£o CPU]\n";
+    Simulation simCPU(netCPU, nextHopCPU, sensorAssignmentCPU, 1.0);
+    simCPU.run(1000);
+
+#ifdef USE_CUDA
+    std::cout << "\n[Simula√ß√£o GPU]\n";
+    Simulation simGPU(netGPU, nextHopGPU, sensorAssignmentGPU, 1.0);
+    simGPU.run(1000);
+#endif
+
+    std::cout << "\n[Fim do pipeline completo]\n";
     return 0;
 }

@@ -1,0 +1,96 @@
+###############################
+# Visual Studio Configuration #
+###############################
+.vs/
+*.vc.db
+*.opendb
+*.VC.db
+*.VC.opendb
+*.user
+*.suo
+*.cache
+*.log
+*.tlog
+*.pdb
+*.ipch
+*.sdf
+*.db
+*.ide
+
+# Backup & crash files
+*.bak
+*.tmp
+*.old
+
+#################################
+# Build & Output Directories    #
+#################################
+[Bb]in/
+[Oo]bj/
+[Ll]og/
+x64/
+x86/
+ARM/
+ARM64/
+Debug/
+Release/
+*.exe
+*.dll
+*.lib
+*.exp
+*.ilk
+*.idb
+*.obj
+*.pch
+
+###########################
+# CUDA / NVIDIA Build     #
+###########################
+*.cubin
+*.fatbin
+*.ptx
+*.gpu
+*.nvvp
+*.nsight
+*.cuobjdump
+*.nvlog
+*.cu.ilk
+*.cu.pdb
+
+##################################
+# CMake / MSBuild Generated Files#
+##################################
+CMakeFiles/
+CMakeCache.txt
+Makefile
+cmake_install.cmake
+build/
+out/
+*.targets
+*.props
+
+###############################
+# System / Misc               #
+###############################
+.DS_Store
+Thumbs.db
+desktop.ini
+
+###############################
+# Optional Project Files       #
+###############################
+# Keep your actual sources & project configs
+!*.sln
+!*.vcxproj
+!*.vcxproj.filters
+!*.vcxproj.user
+!*.cu
+!*.cuh
+!*.h
+!*.hpp
+!*.cpp
+!*.c
+!*.txt
+!*.md
+!*.json
+!*.xml

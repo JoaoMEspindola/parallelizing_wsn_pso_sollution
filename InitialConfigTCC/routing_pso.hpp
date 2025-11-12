@@ -1,4 +1,4 @@
-#ifndef ROUTING_PSO_HPP
+ï»¿#ifndef ROUTING_PSO_HPP
 #define ROUTING_PSO_HPP
 
 #include "network.hpp"
@@ -8,6 +8,7 @@
 #include <limits>
 #include <cmath>
 #include <algorithm>
+#include <fstream>
 
 struct Particle {
     std::vector<double> position;
@@ -27,30 +28,38 @@ public:
         return lastApproxLifetime;
     }
 
-    // Result: nextHop[i] = ID do próximo gateway ou -1 para a BS
+    // Result: nextHop[i] = ID do prÃ³ximo gateway ou -1 para a BS
     std::vector<int> optimizeRouting() {
-        initializeParticles();
+        initializeParticles(); // inicializa swarm e pBests
+        bestHistory.reserve(iterations);
 
         for (int t = 0; t < iterations; ++t) {
+           
             for (auto& p : swarm) {
                 double fitness = evaluate(p);
                 if (fitness > p.pbestFitness) {
                     p.pbestFitness = fitness;
                     p.pbest = p.position;
-                }
 
-                if (fitness > globalBestFitness) {
-                    globalBestFitness = fitness;
-                    globalBest = p.position;
+                    // candidato a globalBest
+                    if (fitness > globalBestFitness) {
+                        globalBestFitness = fitness;
+						globalBest = p.position;
+				        std::cout << "[CPU] Iteration " << t + 1 << ", Particle Fitness: " << fitness << "\n";
+                    }
                 }
-            }
-
+            }           
+            bestHistory.push_back(globalBestFitness);
             updateParticles();
         }
+        // --- Exporta CSV de convergÃªncia final ---
+        std::ofstream csv("pso_convergence_cpu_routing.csv");
+        csv << "iteration,best_fitness\n";
+        for (int i = 0; i < (int)bestHistory.size(); ++i)
+            csv << i << "," << bestHistory[i] << "\n";
 
         return decodeParticle(globalBest);
     }
-
 
 private:
     Network& network;
@@ -63,8 +72,9 @@ private:
     std::vector<double> lastApproxLifetime;
 
     double globalBestFitness = -1;
+    std::vector<double> bestHistory; // histÃ³rico do melhor fitness global por iteraÃ§Ã£o
 
-	void initializeParticles() { // inicializa o swarm com partículas aleatórias
+    void initializeParticles() {
         swarm.clear();
         for (int i = 0; i < swarmSize; ++i) {
             Particle p;
@@ -80,7 +90,8 @@ private:
         }
     }
 
-	std::vector<int> decodeParticle(const std::vector<double>& pos) { // converte a posição da partícula em próximos saltos
+
+	std::vector<int> decodeParticle(const std::vector<double>& pos) { // converte a posiÃ§Ã£o da partÃ­cula em prÃ³ximos saltos
         std::vector<int> result(numGateways, -1);
         for (int i = 0; i < numGateways; ++i) {
             std::vector<int> candidates = network.getNextHopCandidates(i);
@@ -91,45 +102,44 @@ private:
         return result;
     }
 
-    double evaluate(const Particle& p) { // avalia a partícula e retorna a fitness (vida útil aproximada)
-
-		auto nextHop = decodeParticle(p.position); //pode ser paralelizado (1 thread por gateway)
+    double evaluate(const Particle& p) {
+        auto nextHop = decodeParticle(p.position);
         std::vector<double> approxLifetime(numGateways);
-
+        
         for (int i = 0; i < numGateways; ++i) {
             const Node& g = network.nodes[i];
             int nh = nextHop[i];
 
             if (nh == -1) {
-                // Comunicação direta com a BS
+                // ComunicaÃ§Ã£o direta com a BS
                 double d = distance(g.x, g.y, network.bs.x, network.bs.y);
                 double e_tx = transmitEnergy(d);
-                approxLifetime[i] = g.energy / e_tx;
+				approxLifetime[i] = g.energy / e_tx;                
             }
             else {
                 const Node& next = network.nodes[nh];
                 double d = distance(g.x, g.y, next.x, next.y);
                 double e_tx = transmitEnergy(d);
-                double e_rx = receiveEnergy(); // Considera receber de outros nós
+                double e_rx = receiveEnergy();
                 int received = countReceived(i, nextHop);
-                double total = received * e_rx + (received + 1) * e_tx;
-                approxLifetime[i] = g.energy / total;
+				double total = received * e_rx + (received + 1) * e_tx;
+				approxLifetime[i] = g.energy / total;
             }
         }
-
-        lastApproxLifetime = approxLifetime;
-
-        return *std::min_element(approxLifetime.begin(), approxLifetime.end()); //warp-level reduction ??
+		lastApproxLifetime = approxLifetime;
+        return *std::min_element(approxLifetime.begin(), approxLifetime.end());
     }
 
-	int countReceived(int id, const std::vector<int>& nextHop) { // conta quantos nós estão enviando para o gateway id
+
+
+	int countReceived(int id, const std::vector<int>& nextHop) { // conta quantos nÃ³s estÃ£o enviando para o gateway id
         int count = 0;
         for (int i = 0; i < nextHop.size(); ++i)
             if (nextHop[i] == id) ++count;
         return count;
     }
 
-	void updateParticles() { // atualiza a posição e velocidade das partículas
+	void updateParticles() { // atualiza a posiÃ§Ã£o e velocidade das partÃ­culas
         const double w = 0.7968;
         const double c1 = 1.4962;
         const double c2 = 1.4962;

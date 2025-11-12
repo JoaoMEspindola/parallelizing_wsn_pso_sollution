@@ -29,7 +29,8 @@ public:
 
 	std::vector<int> optimizeClustering() { // otimização do agrupamento de sensores
         initializeParticles();
-
+        std::vector<double> bestHistory;
+        bestHistory.reserve(iterations);
         for (int t = 0; t < iterations; ++t) {
             for (auto& p : swarm) {
                 double fitness = evaluate(p);
@@ -43,9 +44,13 @@ public:
                     globalBest = p.position;
                 }
             }
+            bestHistory.push_back(globalBestFitness);
             updateParticles();
         }
-
+        std::ofstream csv("pso_convergence_cpu_clustering.csv");
+        csv << "iteration,best_fitness\n";
+        for (int i = 0; i < (int)bestHistory.size(); ++i)
+            csv << i << "," << bestHistory[i] << "\n";
         return decodeParticle(globalBest);
     }
 

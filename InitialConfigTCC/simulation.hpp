@@ -16,103 +16,170 @@ public:
         thresholdEnergy(thresholdEnergy_) {
     }
 
-    void run(int maxRounds = 1000) { 
+    void run(int maxRounds = 1000, bool stopOnFirstCHFailure = true, const std::string& csvOut = "simulation_trace.csv") {
         int round = 0;
 
-		while (round < maxRounds && activeGateways().size() > 0) { // Enquanto houver gateways ativos e não atingir o máximo de rodadas
-            std::cout << "\n--- Rodada " << round << " ---\n";
-            double minE = 1e9;
-            for (int g = 0; g < net.numGateways; ++g)
-                if (isActive(g))
-                    minE = std::min(minE, net.nodes[g].energy);
+        // states
+        std::unordered_set<int> deadSensors; // sensor ids (sid)
+        deadSensors.reserve(net.numSensors);
+        deadGateways.clear(); // já existe na classe
 
-            std::cout << "Energia mínima entre gateways ativos: " << minE << "\n";
+        // prepare CSV
+        std::ofstream csv(csvOut);
+        csv << "round,alive_sensors,alive_gateways,avg_energy_sensors,avg_energy_gateways,firstCHFailureRound\n";
 
-            // === 1. SENSORES enviam para seus CHs ===
+        // helper lambdas
+        auto isSensorAlive = [&](int sid)->bool {
+            return deadSensors.find(sid) == deadSensors.end() && net.nodes[sid].energy > 0.0;
+            };
+        auto countAliveSensors = [&]() -> int {
+            int cnt = 0;
             for (int i = 0; i < net.numSensors; ++i) {
                 int sid = net.numGateways + i;
-                int gid = sensorAssignment[i];
+                if (isSensorAlive(sid)) ++cnt;
+            }
+            return cnt;
+            };
+        auto avgEnergySensors = [&]() -> double {
+            double sum = 0.0; int cnt = 0;
+            for (int i = 0; i < net.numSensors; ++i) {
+                int sid = net.numGateways + i;
+                if (isSensorAlive(sid)) { sum += net.nodes[sid].energy; ++cnt; }
+            }
+            return (cnt > 0) ? (sum / cnt) : 0.0;
+            };
+        auto avgEnergyGateways = [&]() -> double {
+            double sum = 0.0; int cnt = 0;
+            for (int g = 0; g < net.numGateways; ++g) {
+                if (isActive(g)) { sum += net.nodes[g].energy; ++cnt; }
+            }
+            return (cnt > 0) ? (sum / cnt) : 0.0;
+            };
 
-                if (!isValidGateway(gid)) continue;
+        // main loop
+        while (round < maxRounds) {
+            // stop conditions
+            int aliveGws = (int)activeGateways().size();
+            int aliveSensorsCount = countAliveSensors();
+            if (aliveGws == 0 || aliveSensorsCount == 0) break;
+            if (stopOnFirstCHFailure && firstCHFailed) break;
+
+            // --- 1. Sensores transmitem para seus CHs (se estiverem vivos e tiverem CH válido) ---
+            for (int i = 0; i < net.numSensors; ++i) {
+                int sid = net.numGateways + i;
+                if (!isSensorAlive(sid)) continue; // sensor morto, pula
+
+                int gid = sensorAssignment[i];
+                if (!isValidGateway(gid)) {
+                    // órfão: não transmite (até tentar HELP na etapa 4)
+                    continue;
+                }
 
                 Node& sensor = net.nodes[sid];
                 Node& gateway = net.nodes[gid];
 
+                // sensor transmite
                 double d = distance(sensor.x, sensor.y, gateway.x, gateway.y);
-                sensor.energy -= transmitEnergy(d);
+                double e_tx = transmitEnergy(d);
+                sensor.energy -= e_tx;
+                if (sensor.energy <= 0.0) {
+                    deadSensors.insert(sid);
+                    // sensor morreu ao transmitir; continue (gateway may still have received)
+                }
 
-                gateway.energy -= receiveEnergy();                  // recebe pacote
-                gateway.energy -= 5e-9 * PACKET_SIZE;               // agregação (E_DA)
+                // gateway recebe only if it's still active
+                if (isActive(gid)) {
+                    gateway.energy -= receiveEnergy();
+                    gateway.energy -= 5e-9 * PACKET_SIZE; // E_DA
+                    if (gateway.energy <= 0.0 && deadGateways.find(gid) == deadGateways.end()) {
+                        deadGateways.insert(gid);
+                        if (!firstCHFailed) { firstCHFailed = true; firstCHFailureRound = round; }
+                    }
+                }
             }
 
-            // === 2. GATEWAYS transmitem para seu next hop ===
+            // --- 2. Gateways transmitem para seu next hop (se estiverem ativos e vivos) ---
             for (int g = 0; g < net.numGateways; ++g) {
                 if (!isActive(g)) continue;
-                int nh = nextHop[g];
-
-                if (nh == -1) {
-                    // Direto para BS
-                    double d = distance(net.nodes[g].x, net.nodes[g].y, net.bs.x, net.bs.y);
-                    net.nodes[g].energy -= transmitEnergy(d);
-                }
-                else if (isActive(nh)) {
-                    double d = distance(net.nodes[g].x, net.nodes[g].y, net.nodes[nh].x, net.nodes[nh].y);
-                    net.nodes[g].energy -= transmitEnergy(d);
-                    net.nodes[nh].energy -= receiveEnergy();
-                }
-            }
-
-            // === 3. Detectar falhas de CHs (Threshold) ===
-            for (int g = 0; g < net.numGateways; ++g) {
-                if (isActive(g) && net.nodes[g].energy < thresholdEnergy) {
-                    std::cout << "⚠️  Gateway " << g << " falhou (energia abaixo de limiar).\n";
+                Node& gw = net.nodes[g];
+                if (gw.energy <= 0.0) { // assegura consistência
                     deadGateways.insert(g);
+                    if (!firstCHFailed) { firstCHFailed = true; firstCHFailureRound = round; }
+                    continue;
+                }
 
-                    if (!firstCHFailed) {
-                        firstCHFailureRound = round;
-                        firstCHFailed = true;
-                        std::cout << "⛔ Primeira falha de CH detectada na rodada " << round << ".\n";
+                int nh = nextHop[g];
+                if (nh == -1) {
+                    double d = distance(gw.x, gw.y, net.bs.x, net.bs.y);
+                    gw.energy -= transmitEnergy(d);
+                    if (gw.energy <= 0.0 && deadGateways.find(g) == deadGateways.end()) {
+                        deadGateways.insert(g);
+                        if (!firstCHFailed) { firstCHFailed = true; firstCHFailureRound = round; }
+                    }
+                }
+                else if (nh >= 0 && nh < net.numGateways && isActive(nh)) {
+                    double d = distance(gw.x, gw.y, net.nodes[nh].x, net.nodes[nh].y);
+                    gw.energy -= transmitEnergy(d);
+                    if (gw.energy <= 0.0 && deadGateways.find(g) == deadGateways.end()) {
+                        deadGateways.insert(g);
+                        if (!firstCHFailed) { firstCHFailed = true; firstCHFailureRound = round; }
+                    }
+                    // receiver consumes
+                    if (isActive(nh)) {
+                        net.nodes[nh].energy -= receiveEnergy();
+                        if (net.nodes[nh].energy <= 0.0 && deadGateways.find(nh) == deadGateways.end()) {
+                            deadGateways.insert(nh);
+                            if (!firstCHFailed) { firstCHFailed = true; firstCHFailureRound = round; }
+                        }
                     }
                 }
             }
 
-            // === 4. SENSORES órfãos enviam HELP (e buscam novo CH) ===
+            // --- 3. Atualiza listas de mortos (sensores já marcados, gateways já marcados) ---
+            // (já fizemos inserções imediatas quando energy <= 0)
+
+            // --- 4. Sensores órfãos tentam HELP e se reconectam ---
             for (int i = 0; i < net.numSensors; ++i) {
                 int sid = net.numGateways + i;
-                int gid = sensorAssignment[i];
+                if (!isSensorAlive(sid)) continue; // sensor morto não busca CH
 
-                if (!isValidGateway(gid)) {
-                    // Sensor envia HELP
-                    int newCH = findNewGateway(sid);
-                    if (newCH != -1) {
-                        sensorAssignment[i] = newCH;
-                        std::cout << "Sensor " << i << " se reconectou ao Gateway " << newCH << " após HELP.\n";
-                    }
-                    else {
-                        // continua órfão
-                        sensorAssignment[i] = -1;
-                    }
+                int gid = sensorAssignment[i];
+                if (isValidGateway(gid)) continue; // já tem CH válido
+
+                int newCH = findNewGateway(sid);
+                if (newCH != -1) {
+                    sensorAssignment[i] = newCH;
+                }
+                else {
+                    sensorAssignment[i] = -1; // permanece órfão
                 }
             }
 
-            ++round;
-            std::cout << "Energia do Gateway 0: " << net.nodes[0].energy << "\n";
-            std::cout << "Energia do Sensor 0: " << net.nodes[net.numGateways].energy << "\n";
+            // --- 5. Registro por rodada ---
+            aliveGws = (int)activeGateways().size();
+            aliveSensorsCount = countAliveSensors();
+            double avgE_s = avgEnergySensors();
+            double avgE_g = avgEnergyGateways();
 
-        }
+            csv << round << "," << aliveSensorsCount << "," << aliveGws << ","
+                << avgE_s << "," << avgE_g << "," << firstCHFailureRound << "\n";
+
+            ++round;
+        } // loop rounds
+
+        csv.close();
 
         std::cout << "\n=== Fim da simulação ===\n";
         std::cout << "Rodadas executadas: " << round << "\n";
         std::cout << "Gateways ativos restantes: " << activeGateways().size() << "\n";
-
         if (firstCHFailureRound >= 0) {
-            std::cout << "🕒 Primeira falha de gateway ocorreu na rodada " << firstCHFailureRound << ".\n";
+            std::cout << "Primeira falha de gateway ocorreu na rodada " << firstCHFailureRound << ".\n";
         }
         else {
-            std::cout << "✅ Nenhum CH falhou durante a simulação.\n";
+            std::cout << "Nenhum CH falhou durante a simulação.\n";
         }
-
     }
+
 
 
 private:

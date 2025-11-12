@@ -1,20 +1,19 @@
 ﻿  main.cpp
-C:\Users\jpmar\source\repos\parallelizing_wsn_pso_sollution\InitialConfigTCC\simulation.hpp(68,34): warning C4566: caractere representado por nome de caractere universal (UCN) '\u26A0' não pode ser representado na página de código atual (1252)
-  (compilando o arquivo fonte 'main.cpp')
-  
-C:\Users\jpmar\source\repos\parallelizing_wsn_pso_sollution\InitialConfigTCC\simulation.hpp(68,34): warning C4566: caractere representado por nome de caractere universal (UCN) '\uFE0F' não pode ser representado na página de código atual (1252)
-  (compilando o arquivo fonte 'main.cpp')
-  
-C:\Users\jpmar\source\repos\parallelizing_wsn_pso_sollution\InitialConfigTCC\simulation.hpp(74,38): warning C4566: caractere representado por nome de caractere universal (UCN) '\u26D4' não pode ser representado na página de código atual (1252)
-  (compilando o arquivo fonte 'main.cpp')
-  
-C:\Users\jpmar\source\repos\parallelizing_wsn_pso_sollution\InitialConfigTCC\simulation.hpp(109,26): warning C4566: caractere representado por nome de caractere universal (UCN) '\U0001F552' não pode ser representado na página de código atual (1252)
-  (compilando o arquivo fonte 'main.cpp')
-  
-C:\Users\jpmar\source\repos\parallelizing_wsn_pso_sollution\InitialConfigTCC\simulation.hpp(112,26): warning C4566: caractere representado por nome de caractere universal (UCN) '\u2705' não pode ser representado na página de código atual (1252)
-  (compilando o arquivo fonte 'main.cpp')
-  
 C:\Users\jpmar\source\repos\parallelizing_wsn_pso_sollution\InitialConfigTCC\export.cpp(17,18): warning C4267: 'inicializando': conversão de 'size_t' para 'int', possível perda de dados
   (compilando o arquivo fonte 'main.cpp')
+  
+C:\Users\jpmar\source\repos\parallelizing_wsn_pso_sollution\InitialConfigTCC\compact_graph.hpp(24,11): warning C4267: 'inicializando': conversão de 'size_t' para 'int', possível perda de dados
+  (compilando o arquivo fonte 'main.cpp')
+  
+C:\Users\jpmar\source\repos\parallelizing_wsn_pso_sollution\InitialConfigTCC\compact_graph.hpp(31,50): warning C4267: '+=': conversão de 'size_t' para 'int', possível perda de dados
+  (compilando o arquivo fonte 'main.cpp')
+  
+C:\Users\jpmar\source\repos\parallelizing_wsn_pso_sollution\InitialConfigTCC\compact_graph.hpp(46,35): warning C4267: '+=': conversão de 'size_t' para 'int', possível perda de dados
+  (compilando o arquivo fonte 'main.cpp')
+  
+C:\Users\jpmar\source\repos\parallelizing_wsn_pso_sollution\InitialConfigTCC\clustering_pso_cuda.hpp(12,9): warning C4005: 'CUDA_CALL': redefinição de macro
+  (compilando o arquivo fonte 'main.cpp')
+      C:\Users\jpmar\source\repos\parallelizing_wsn_pso_sollution\InitialConfigTCC\routing_pso_cuda.hpp(20,9):
+      ver a definição anterior de "CUDA_CALL"
   
   InitialConfigTCC.vcxproj -> C:\Users\jpmar\source\repos\parallelizing_wsn_pso_sollution\InitialConfigTCC\x64\Debug\InitialConfigTCC.exe

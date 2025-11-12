@@ -18,6 +18,10 @@ public:
     double sensorRange, gatewayRange;
     BaseStation bs;
 
+    std::vector<int> offsets;
+    std::vector<int> neighbors;
+
+
     Network(int numSensors_, int numGateways_, double width_, double height_,
         double sensorRange_ = 80.0, double gatewayRange_ = 120.0)
         : numSensors(numSensors_), numGateways(numGateways_),
@@ -52,9 +56,10 @@ public:
                 else if (!nodes[i].isGateway && nodes[j].isGateway && d <= sensorRange) {
                     nodes[i].neighbors.push_back(j);
                 }
-                // Nenhuma outra conexão é permitida pelo artigo
             }
         }
+
+        buildCompactAdjacency();
     }
 
     std::vector<int> getNextHopCandidates(int gatewayId) const {
@@ -80,14 +85,32 @@ public:
     }
 
 
+    void buildCompactAdjacency() {
+        offsets.clear();
+        neighbors.clear();
+
+        offsets.reserve(nodes.size() + 1);
+        offsets.push_back(0);
+
+        for (const auto& node : nodes) {
+            neighbors.insert(neighbors.end(),
+                node.neighbors.begin(),
+                node.neighbors.end());
+            offsets.push_back(static_cast<int>(neighbors.size()));
+        }
+
+        std::cout << "[INFO] Estrutura CSR criada: "
+            << neighbors.size() << " conexões compactadas.\n";
+    }
+
     void printSummary() {
         std::cout << "Total Nodes: " << nodes.size() << "\n";
-        for (auto& node : nodes) {
+        /*for (auto& node : nodes) {
             std::cout << "Node " << node.id
                 << (node.isGateway ? " [Gateway]" : " [Sensor]")
                 << " (" << node.x << ", " << node.y << ") -> "
                 << node.neighbors.size() << " neighbors\n";
-        }
+        }*/
     }
 };
 
