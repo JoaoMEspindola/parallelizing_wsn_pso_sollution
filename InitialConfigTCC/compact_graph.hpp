@@ -3,13 +3,7 @@
 
 #include "network.hpp"
 #include <vector>
-
-// Estrutura simplificada do nó para GPU
-struct NodeGPU {
-    double x, y;     // posição
-    double energy;   // energia residual
-    int isGateway;   // 1 = gateway, 0 = sensor
-};
+#include "node_gpu.hpp"
 
 // Estrutura da lista compacta (CPU)
 struct CompactGraphHost {
@@ -17,6 +11,16 @@ struct CompactGraphHost {
     std::vector<int> h_offsets;
     std::vector<int> h_adjacency;
 };
+
+// Estrutura da lista compacta (GPU)
+struct CompactGraphDevice {
+    NodeGPU* d_nodes;
+    int* d_offsets;
+    int* d_adjacency;
+    int totalNodes;
+    int totalEdges;
+};
+
 
 // === Função para gerar a lista compacta ===
 inline CompactGraphHost buildCompactGraph(const Network& net) {

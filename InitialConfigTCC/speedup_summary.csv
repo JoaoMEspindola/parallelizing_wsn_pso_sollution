@@ -1,3 +1,3 @@
-Stage,CPU_Time(s),GPU_Time(s),Speedup
-Routing,1.79091,0.419391,4.27028
-Clustering,10.0197,2.15267,4.65452
+Stage,CPU_Time(s),GPU_ThreadPSO_Time(s),GPU_BlockPSO_Time(s),Speedup_ThreadPSO,Speedup_BlockPSO
+Routing,1.60524,0.46033,0.384629,3.48715,4.17348
+Clustering,8.69252,1.97643,1.9978,4.3981,4.35105

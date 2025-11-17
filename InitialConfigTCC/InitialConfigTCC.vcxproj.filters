@@ -57,6 +57,15 @@
     <ClInclude Include="cuda_common_kernels.hpp">
       <Filter>Arquivos de Cabeçalho</Filter>
     </ClInclude>
+    <ClInclude Include="routing_pso_block_cuda.hpp">
+      <Filter>Arquivos de Cabeçalho</Filter>
+    </ClInclude>
+    <ClInclude Include="energy_gpu.hpp">
+      <Filter>Arquivos de Cabeçalho</Filter>
+    </ClInclude>
+    <ClInclude Include="clustering_pso_cuda_blocks.hpp">
+      <Filter>Arquivos de Cabeçalho</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp">
@@ -74,6 +83,12 @@
       <Filter>Arquivos de Origem</Filter>
     </CudaCompile>
     <CudaCompile Include="cuda_common_kernels.cu">
+      <Filter>Arquivos de Origem</Filter>
+    </CudaCompile>
+    <CudaCompile Include="routing_pso_block_cuda.cu">
+      <Filter>Arquivos de Origem</Filter>
+    </CudaCompile>
+    <CudaCompile Include="clustering_pso_cuda_blocks.cu">
       <Filter>Arquivos de Origem</Filter>
     </CudaCompile>
   </ItemGroup>

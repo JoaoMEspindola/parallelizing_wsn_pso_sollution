@@ -23,29 +23,6 @@ __global__ void initParticlesKernel(double* positions, double* velocities, int n
 // Funções auxiliares GPU
 // ===========================
 
-__device__ double distanceGPU(double x1, double y1, double x2, double y2) {
-    double dx = x1 - x2;
-    double dy = y1 - y2;
-    return sqrt(dx * dx + dy * dy);
-}
-
-// === Modelo de energia baseado no artigo (simplificado) ===
-// Parâmetros típicos de comunicação WSN
-__device__ double transmitEnergyGPU(double d) {
-    const double E_elec = 50e-9;   // Energia por bit do transmissor
-    const double E_amp = 100e-12;  // Energia do amplificador
-    const double k = 4000;         // bits por pacote
-
-    return (E_elec + E_amp * d * d) * k;
-}
-
-__device__ double receiveEnergyGPU() {
-    const double E_elec = 50e-9;
-    const double k = 4000;
-    return E_elec * k;
-}
-
-
 // =============================================================
 // Kernel: avalia cada partícula (thread = 1 partícula)
 // =============================================================

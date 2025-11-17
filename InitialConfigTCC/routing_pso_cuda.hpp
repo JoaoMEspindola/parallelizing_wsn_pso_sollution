@@ -2,20 +2,11 @@
 #define ROUTING_PSO_CUDA_HPP
 
 #include "network.hpp"
+#include "energy_gpu.hpp"
 #include <vector>
 #include <cuda_runtime.h>
 #include "compact_graph.hpp"
 #include <curand_kernel.h>
-
-
-struct CompactGraphDevice {
-    NodeGPU* d_nodes;
-    int* d_offsets;
-    int* d_adjacency;
-    int totalNodes;
-    int totalEdges;
-};
-
 
 #define CUDA_CALL(x) do { if((x) != cudaSuccess) { \
     fprintf(stderr, "Erro CUDA: %s (%s:%d)\n", cudaGetErrorString(x), __FILE__, __LINE__); \
