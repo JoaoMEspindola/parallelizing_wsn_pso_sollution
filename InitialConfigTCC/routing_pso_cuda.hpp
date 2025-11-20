@@ -26,8 +26,6 @@ private:
 
     curandState* d_randStates; // Um gerador por thread
 
-    int* d_status; // allocate in allocateMemory(): cudaMalloc(&d_status, sizeof(int)*swarmSize);
-
     double* d_pbest;
     double* d_gbest;
 

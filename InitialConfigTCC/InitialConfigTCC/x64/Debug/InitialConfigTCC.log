@@ -1,54 +1,24 @@
-﻿  Compiling CUDA source file clustering_pso_cuda_blocks.cu...
+﻿  main.cpp
+C:\Users\jpmar\source\repos\parallelizing_wsn_pso_sollution\InitialConfigTCC\export.cpp(16,18): warning C4267: 'inicializando': conversão de 'size_t' para 'int', possível perda de dados
+  (compilando o arquivo fonte 'main.cpp')
   
-  C:\Users\jpmar\source\repos\parallelizing_wsn_pso_sollution\InitialConfigTCC>"C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v12.6\bin\nvcc.exe" -gencode=arch=compute_52,code=\"sm_52,compute_52\" --use-local-env -ccbin "C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\bin\HostX64\x64" -x cu   -I"C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v12.6\include" -I"C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v12.6\include" -I"C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v12.6\include" -I"C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v12.6\include"  -G   --keep-dir InitialConfigTCC\x64\Debug  -maxrregcount=0   --machine 64 --compile -cudart static -Xptxas -v -g  -DUSE_CUDA -D_DEBUG -D_CONSOLE -D_UNICODE -DUNICODE -Xcompiler "/EHsc /W3 /nologo /Od /FS /Zi /RTC1 /MDd " -Xcompiler "/FdInitialConfigTCC\x64\Debug\vc143.pdb" -o C:\Users\jpmar\source\repos\parallelizing_wsn_pso_sollution\InitialConfigTCC\InitialConfigTCC\x64\Debug\clustering_pso_cuda_blocks.cu.obj "C:\Users\jpmar\source\repos\parallelizing_wsn_pso_sollution\InitialConfigTCC\clustering_pso_cuda_blocks.cu" 
-C:\Users\jpmar\source\repos\parallelizing_wsn_pso_sollution\InitialConfigTCC\clustering_pso_cuda_blocks.cu(497): warning #1713-D: conversion drops "__restrict" qualifier
-        do { cudaError_t e=(cudaMalloc(&d_relaysCount, sizeof(int) * numGateways)); if(e!=cudaSuccess){ std::cerr<<"CUDA ERROR: "<<cudaGetErrorString(e)<<" ("<<"C:\\Users\\jpmar\\source\\repos\\parallelizing_wsn_pso_sollution\\InitialConfigTCC\\clustering_pso_cuda_blocks.cu"<<":"<<497<<")\n"; exit(1);} } while(0);
-                                       ^
+C:\Users\jpmar\source\repos\parallelizing_wsn_pso_sollution\InitialConfigTCC\compact_graph.hpp(28,11): warning C4267: 'inicializando': conversão de 'size_t' para 'int', possível perda de dados
+  (compilando o arquivo fonte 'main.cpp')
   
-  Remark: The warnings can be suppressed with "-diag-suppress <warning-number>"
+C:\Users\jpmar\source\repos\parallelizing_wsn_pso_sollution\InitialConfigTCC\compact_graph.hpp(35,50): warning C4267: '+=': conversão de 'size_t' para 'int', possível perda de dados
+  (compilando o arquivo fonte 'main.cpp')
   
-C:\Users\jpmar\source\repos\parallelizing_wsn_pso_sollution\InitialConfigTCC\clustering_pso_cuda_blocks.cu(237): warning #177-D: variable "bytes" was declared but never referenced
-                size_t bytes = sizeof(double) * (size_t)numSensors;
-                       ^
+C:\Users\jpmar\source\repos\parallelizing_wsn_pso_sollution\InitialConfigTCC\compact_graph.hpp(50,35): warning C4267: '+=': conversão de 'size_t' para 'int', possível perda de dados
+  (compilando o arquivo fonte 'main.cpp')
   
-  Remark: The warnings can be suppressed with "-diag-suppress <warning-number>"
+C:\Users\jpmar\source\repos\parallelizing_wsn_pso_sollution\InitialConfigTCC\routing_pso_block_cuda.hpp(16,9): warning C4005: 'CUDA_CALL': redefinição de macro
+  (compilando o arquivo fonte 'main.cpp')
+      C:\Users\jpmar\source\repos\parallelizing_wsn_pso_sollution\InitialConfigTCC\routing_pso_cuda.hpp(11,9):
+      ver a definição anterior de "CUDA_CALL"
   
-C:\Users\jpmar\source\repos\parallelizing_wsn_pso_sollution\InitialConfigTCC\clustering_pso_cuda_blocks.cu(497): warning #1713-D: conversion drops "__restrict" qualifier
-        do { cudaError_t e=(cudaMalloc(&d_relaysCount, sizeof(int) * numGateways)); if(e!=cudaSuccess){ std::cerr<<"CUDA ERROR: "<<cudaGetErrorString(e)<<" ("<<"C:\\Users\\jpmar\\source\\repos\\parallelizing_wsn_pso_sollution\\InitialConfigTCC\\clustering_pso_cuda_blocks.cu"<<":"<<497<<")\n"; exit(1);} } while(0);
-                                       ^
+C:\Users\jpmar\source\repos\parallelizing_wsn_pso_sollution\InitialConfigTCC\clustering_pso_cuda.hpp(12,9): warning C4005: 'CUDA_CALL': redefinição de macro
+  (compilando o arquivo fonte 'main.cpp')
+      C:\Users\jpmar\source\repos\parallelizing_wsn_pso_sollution\InitialConfigTCC\routing_pso_block_cuda.hpp(16,9):
+      ver a definição anterior de "CUDA_CALL"
   
-C:\Users\jpmar\source\repos\parallelizing_wsn_pso_sollution\InitialConfigTCC\clustering_pso_cuda_blocks.cu(503): warning #177-D: variable "totalParticles_local" was declared but never referenced
-            int totalParticles_local = totalParticles;
-                ^
-  
-  ptxas info    : 218085 bytes gmem, 72 bytes cmem[3]
-  ptxas info    : Compiling entry function '_Z24initParticlesBlockKernelPdS_iim' for 'sm_52'
-  ptxas info    : Function properties for _Z24initParticlesBlockKernelPdS_iim
-      0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
-  ptxas info    : Used 44 registers, used 0 barriers, 348 bytes cmem[0], 24 bytes cmem[2]
-  ptxas info    : Compiling entry function '_Z27evaluateClustersBlockKernelPKdPdiiiPK7NodeGPUPKiS6_S0_S6_S6_dd' for 'sm_52'
-  ptxas info    : Function properties for _Z27evaluateClustersBlockKernelPKdPdiiiPK7NodeGPUPKiS6_S0_S6_S6_dd
-      264 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
-  ptxas info    : Used 95 registers, used 1 barriers, 272 bytes cumulative stack size, 416 bytes cmem[0], 24 bytes cmem[2]
-  ptxas info    : Compiling entry function '_Z30updatePersonalBestKernel_BlockPKdPdS0_S1_ii' for 'sm_52'
-  ptxas info    : Function properties for _Z30updatePersonalBestKernel_BlockPKdPdS0_S1_ii
-      0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
-  ptxas info    : Used 18 registers, used 0 barriers, 360 bytes cmem[0]
-  ptxas info    : Compiling entry function '_Z23computeBlockGBestKernelPKdS0_PdS1_ii' for 'sm_52'
-  ptxas info    : Function properties for _Z23computeBlockGBestKernelPKdS0_PdS1_ii
-      0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
-  ptxas info    : Used 24 registers, used 1 barriers, 360 bytes cmem[0]
-  ptxas info    : Compiling entry function '_Z27updateParticlesKernel_BlockPdS_PKdS1_P17curandStateXORWOWiiddd' for 'sm_52'
-  ptxas info    : Function properties for _Z27updateParticlesKernel_BlockPdS_PKdS1_P17curandStateXORWOWiiddd
-      96 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
-  ptxas info    : Used 39 registers, used 0 barriers, 96 bytes cumulative stack size, 392 bytes cmem[0]
-  ptxas info    : Function properties for __finite
-      0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
-  ptxas info    : Function properties for __isfinited
-      0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
-  ptxas info    : Function properties for _ZN60_INTERNAL_fa4970ad_29_clustering_pso_cuda_blocks_cu_37a7c02d8isfiniteEd
-      8 bytes stack frame, 8 bytes spill stores, 8 bytes spill loads
-  clustering_pso_cuda_blocks.cu
-  tmpxft_00000be0_00000000-7_clustering_pso_cuda_blocks.cudafe1.cpp
-C:\Users\jpmar\source\repos\parallelizing_wsn_pso_sollution\InitialConfigTCC\clustering_pso_cuda_blocks.cu(1): warning C4068: pragma 'diag_warn' desconhecido
   InitialConfigTCC.vcxproj -> C:\Users\jpmar\source\repos\parallelizing_wsn_pso_sollution\InitialConfigTCC\x64\Debug\InitialConfigTCC.exe

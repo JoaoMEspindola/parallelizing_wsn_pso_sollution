@@ -43,8 +43,7 @@ int main() {
     // === GERA REDE ===
     Network net(numSensors, numGateways, areaWidth, areaHeight);
     net.generate();
-    exportNetworkAndLinksToCSV(net, "network_full.csv");
-
+    
     std::cout << "Rede gerada com " << numSensors << " sensores e "
         << numGateways << " gateways.\n";
 

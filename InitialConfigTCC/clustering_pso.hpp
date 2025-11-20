@@ -1,7 +1,7 @@
 ﻿#ifndef CLUSTERING_PSO_HPP
 #define CLUSTERING_PSO_HPP
 
-#include "network.hpp"
+#include "export.hpp"
 #include "energy.hpp"
 #include <vector>
 #include <limits>
@@ -51,6 +51,18 @@ public:
         csv << "iteration,best_fitness\n";
         for (int i = 0; i < (int)bestHistory.size(); ++i)
             csv << i << "," << bestHistory[i] << "\n";
+
+        std::vector<int> assignmentCPU = decodeParticle(globalBest);
+
+        exportNetworkAndLinksToCSV(
+            network,
+            "cpu_network.csv",
+            nextHop,
+            assignmentCPU,
+            clusterRadii
+        );
+
+
         return decodeParticle(globalBest);
     }
 

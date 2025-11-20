@@ -8,7 +8,7 @@
 #include <cuda_runtime.h>
 #include <curand_kernel.h>
 #include "node_gpu.hpp"
-
+#include "export.hpp"
 #include "cuda_common_kernels.hpp"
 #include "energy.hpp"
 #include "utils.hpp"
@@ -65,7 +65,7 @@ private:
     int* d_sensorOffsets = nullptr;   // length = numSensors + 1
     int* d_sensorAdj = nullptr;   // flattened adjacency
     bool sensorAdjAllocated = false;
-
+    int bestBlockIdx = -1;
 
     // network data
     NodeGPU* d_nodes = nullptr;

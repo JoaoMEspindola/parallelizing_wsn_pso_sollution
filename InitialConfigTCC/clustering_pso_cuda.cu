@@ -1,5 +1,6 @@
 ﻿#ifdef USE_CUDA
 
+#include "export.hpp"
 #include "node_gpu.hpp"
 #include "clustering_pso_cuda.hpp"
 #include "cuda_common_kernels.hpp"
@@ -291,9 +292,6 @@ __global__ void evaluateClustersKernel(
 
     d_fitness[pid] = minLifetime;
 }
-
-
-
 
 // atualiza pbest: se fitness maior que pbestFitness, copia posicionamento da partícula para pbest
 __global__ void updatePersonalBestKernel_Clust(
@@ -594,9 +592,64 @@ void ClusteringPSO_CUDA::run() {
         CUDA_CALL(cudaMemcpy(h_gbest_cache.data(), d_gbest, sizeof(double) * (size_t)numSensors, cudaMemcpyDeviceToHost));
     }
 
+    std::vector<int> sensorOffsets(numSensors + 1);
+    std::vector<int> sensorAdj;
+    sensorOffsets[0] = 0;
+    sensorAdj.reserve(numSensors * 8);
+
+    // clusterRadiiHost já existe no seu objeto
+    for (int s = 0; s < numSensors; ++s) {
+        int count = 0;
+        const Node& sensor = net.nodes[numGateways + s];
+
+        for (int g = 0; g < numGateways; ++g) {
+            const Node& gw = net.nodes[g];
+            double dx = gw.x - sensor.x;
+            double dy = gw.y - sensor.y;
+            double d2 = dx * dx + dy * dy;
+            double r = clusterRadiiHost[g];
+            if (d2 <= r * r) {
+                sensorAdj.push_back(g);
+                count++;
+            }
+        }
+
+        sensorOffsets[s + 1] = sensorOffsets[s] + count;
+    }
+
+    // ============================================================
+    // DECODE FINAL DO CLUSTERING USANDO O GBEST DO PSO
+    // ============================================================
+    std::vector<int> assignmentGPU(numSensors);
+
+    for (int s = 0; s < numSensors; ++s) {
+        int start = sensorOffsets[s];
+        int end = sensorOffsets[s + 1];
+        int deg = end - start;
+
+        int assigned = -1;
+        if (deg > 0) {
+            int pick = (int)(h_gbest_cache[s] * deg);
+            if (pick >= deg) pick = deg - 1;
+            assigned = sensorAdj[start + pick];
+        }
+
+        assignmentGPU[s] = assigned;
+    }
+
+    // ============================================================
+    // EXPORTAÇÃO
+    // ============================================================
+    exportNetworkAndLinksToCSV(
+        net,
+        "gpu_network.csv",
+        nextHopHost,
+        assignmentGPU,
+        clusterRadiiHost
+    );
+
+
     freeMemory();
 }
-
-
 
 #endif // USE_CUDA

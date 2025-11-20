@@ -170,9 +170,6 @@ __global__ void evaluateClustersBlockKernel(
     d_fitness[pid] = anyValid ? minLifetime : 0.0;
 }
 
-
-
-
 // --------------------------- update personal best (per particle) ---------------------------
 __global__ void updatePersonalBestKernel_Block(
     const double* d_positions,
@@ -406,15 +403,16 @@ void ClusteringPSO_CUDA_Block::mergeBlockGBestToHostAndSelect() {
 
     // choose best block
     double bestVal = -1e300;
-    int bestBlock = -1;
+    bestBlockIdx = -1;
+
     for (int b = 0; b < numBlocks; ++b) {
-        if (h_blockFitness[b] > bestVal) { bestVal = h_blockFitness[b]; bestBlock = b; }
+        if (h_blockFitness[b] > bestVal) { bestVal = h_blockFitness[b]; bestBlockIdx = b; }
     }
 
-    if (bestBlock >= 0) {
+    if (bestBlockIdx >= 0) {
         h_gbest_cache.resize(numSensors);
         for (int s = 0; s < numSensors; ++s)
-            h_gbest_cache[s] = h_blockGbest[(size_t)bestBlock * numSensors + s];
+            h_gbest_cache[s] = h_blockGbest[(size_t)bestBlockIdx * numSensors + s];
     }
     else {
         // fallback: zeros
@@ -569,6 +567,48 @@ void ClusteringPSO_CUDA_Block::run() {
 
     std::cout << "[CUDA][ClusteringPSO_Block] finalizado. melhor fitness final = "
         << (h_bestHistory.empty() ? 0.0 : h_bestHistory.back()) << "\n";
+
+    std::vector<double> bestPos(numSensors);
+
+    // bestBlockIdx foi definido dentro de mergeBlockGBestToHostAndSelect()
+    CUDA_CALL_BLOCK(cudaMemcpy(
+        bestPos.data(),
+        d_gbest_blocks + (size_t)bestBlockIdx * (size_t)numSensors,
+        sizeof(double) * numSensors,
+        cudaMemcpyDeviceToHost
+    ));
+
+    // ============================================================
+    // DECODE CLUSTERING DO BEST POS
+    // ============================================================
+    std::vector<int> assignmentGPUBlock(numSensors);
+
+    for (int s = 0; s < numSensors; ++s) {
+        int start = sensorOffsets[s];
+        int end = sensorOffsets[s + 1];
+        int deg = end - start;
+
+        int assigned = -1;
+        if (deg > 0) {
+            int pick = (int)(bestPos[s] * deg);
+            if (pick >= deg) pick = deg - 1;
+            assigned = sensorAdj[start + pick];
+        }
+
+        assignmentGPUBlock[s] = assigned;
+    }
+
+    // ============================================================
+    // EXPORTAR RESULTADOS
+    // ============================================================
+    exportNetworkAndLinksToCSV(
+        net,
+        "gpu_block_network.csv",
+        nextHopHost,
+        assignmentGPUBlock,
+        clusterRadiiHost
+    );
+
 
     // --- liberar adjacency (se ainda alocado) ---
     if (sensorAdjAllocated) {

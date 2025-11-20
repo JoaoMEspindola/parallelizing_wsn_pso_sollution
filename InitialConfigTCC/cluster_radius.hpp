@@ -4,7 +4,7 @@
 #include <vector>
 #include <algorithm>
 
-inline std::vector<double> computeClusterRadii( // Função para calcular os raios dos clusters
+inline std::vector<double> computeClusterRadii(
     const std::vector<double>& approxLifetime,
     double d_max,
     double epsilon = 0.5)
@@ -16,7 +16,6 @@ inline std::vector<double> computeClusterRadii( // Função para calcular os raios
 
     for (size_t i = 0; i < approxLifetime.size(); ++i) {
         if (maxLife == minLife) {
-            // Vida útil uniforme: todos têm mesmo raio
             clusterRadii[i] = d_max;
         }
         else {
