@@ -98,9 +98,6 @@ public:
                 node.neighbors.end());
             offsets.push_back(static_cast<int>(neighbors.size()));
         }
-
-        std::cout << "[INFO] Estrutura CSR criada: "
-            << neighbors.size() << " conexões compactadas.\n";
     }
 
     void printSummary() {

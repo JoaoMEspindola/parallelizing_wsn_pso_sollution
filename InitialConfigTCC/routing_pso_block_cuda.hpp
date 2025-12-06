@@ -2,7 +2,7 @@
 #ifndef ROUTING_PSO_BLOCK_CUDA_HPP
 #define ROUTING_PSO_BLOCK_CUDA_HPP
 
-#include "cuda_common_kernels.hpp"   // ✅ adiciona kernel initCurandKernel
+#include "cuda_common_kernels.hpp"
 #include "utils.hpp"
 #include "energy.hpp"
 #include "compact_graph.hpp"
@@ -30,7 +30,7 @@
 class RoutingPSO_Block_CUDA {
 public:
     // numRevoadas: quantas revoadas distintas (i.e. número de blocos) — default 8
-    RoutingPSO_Block_CUDA(Network& net_, int swarmSize_, int iterations_, int numRevoadas_ = 8);
+    RoutingPSO_Block_CUDA(Network& net_, int swarmSize_, int iterations_, int numRevoadas_);
     ~RoutingPSO_Block_CUDA();
 
     void run();

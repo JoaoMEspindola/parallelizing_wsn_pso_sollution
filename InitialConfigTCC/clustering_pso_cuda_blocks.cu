@@ -53,8 +53,8 @@ __global__ void evaluateClustersBlockKernel(
     const int* __restrict__ d_nextHop,
     const int* __restrict__ d_relaysCount,
     const double* __restrict__ d_clusterRadii,
-    const int* __restrict__ d_sensorOffsets, // new
-    const int* __restrict__ d_sensorAdj,     // new
+    const int* __restrict__ d_sensorOffsets, // CSR offsets (numSensors+1)
+    const int* __restrict__ d_sensorAdj,     // CSR adjacency
     double bsx, double bsy)
 {
     const int GW_LIMIT = 128;
@@ -72,61 +72,62 @@ __global__ void evaluateClustersBlockKernel(
 
     // ------------------------
     // shared memory for gateways
+    // layout: x[numGateways], y[numGateways], E[numGateways]
     // ------------------------
-    extern __shared__ double s_buf[]; // request 4 * numGateways * sizeof(double)
+    extern __shared__ double s_buf[]; // expect at least 3 * numGateways * sizeof(double)
     double* s_gw_x = s_buf;
     double* s_gw_y = s_gw_x + numGateways;
     double* s_gw_E = s_gw_y + numGateways;
-    double* s_r2 = s_gw_E + numGateways;
+    // NOTE: we don't need s_r2 here because adjacency is precomputed on host
 
-    // cooperative load
+    // cooperative load of gateway info
     for (int g = threadIdx.x; g < numGateways; g += blockDim.x) {
         const NodeGPU& gw = d_nodes[g];
         s_gw_x[g] = gw.x;
         s_gw_y[g] = gw.y;
         s_gw_E[g] = gw.energy;
-        double r = d_clusterRadii ? d_clusterRadii[g] : 0.0;
-        s_r2[g] = r * r;
     }
     __syncthreads();
 
     // clusterSizes per-thread (small footprint)
-    // assume numSensors <= 65535; senão use uint32_t
+    // assume numGateways <= GW_LIMIT
     uint16_t clusterSizes[GW_LIMIT];
 #pragma unroll 4
     for (int g = 0; g < numGateways; ++g) clusterSizes[g] = 0;
 
-    // For each sensor, iterate only over its candidate gateways (from adjacency)
+    // === build clusters using CSR adjacency (host-built) ===
+    // For each sensor, read its candidate gateways from d_sensorOffsets/d_sensorAdj
     for (int s = 0; s < numSensors; ++s) {
         double val = pos[s];
 
         int start = d_sensorOffsets[s];
         int end = d_sensorOffsets[s + 1];
         int deg = end - start;
-        if (deg == 0) continue;
+        if (deg <= 0) continue;
 
-        // pick in [0,deg-1]
+        // robust pick in [0, deg-1]
         int pick = (int)(val * (double)deg);
+        if (pick < 0) pick = 0;
         if (pick >= deg) pick = deg - 1;
 
         int chosenGateway = d_sensorAdj[start + pick];
-        if (chosenGateway >= 0 && chosenGateway < numGateways)
+        if (chosenGateway >= 0 && chosenGateway < numGateways) {
             clusterSizes[chosenGateway]++;
+        }
     }
 
     // -------------------------------------------------------------
     // Compute lifetime using clusterSizes (per-thread), gateways in shared
     // -------------------------------------------------------------
     const double E_elec = 50e-9;
-    const double E_amp = 10e-12;
-    const double E_rx = E_elec * PACKET_SIZE;
-    const double E_agg = 5e-9 * PACKET_SIZE;
+    const double E_amp  = 10e-12;
+    const double E_rx   = E_elec * PACKET_SIZE;
+    const double E_agg  = 5e-9 * PACKET_SIZE;
 
     double minLifetime = 1e300;
     bool anyValid = false;
 
     for (int g = 0; g < numGateways; ++g) {
-
         double gwx = s_gw_x[g];
         double gwy = s_gw_y[g];
         double energy = s_gw_E[g];
@@ -137,28 +138,33 @@ __global__ void evaluateClustersBlockKernel(
         double e_inter = 0.0;
 
         if (nh == -1) {
+            // gateway -> BS
             double dx = gwx - bsx;
             double dy = gwy - bsy;
-            double d2 = dx * dx + dy * dy;
-            double Etx = (E_elec + E_amp * d2) * PACKET_SIZE;
+            double d = sqrt(dx * dx + dy * dy);           // use sqrt to match thread/CPU
+            double Etx = (E_elec + E_amp * d * d) * PACKET_SIZE;
             e_inter = Etx;
         }
         else if (nh >= 0 && nh < numGateways) {
-            double dx = gwx - s_gw_x[nh];
-            double dy = gwy - s_gw_y[nh];
-            double d2 = dx * dx + dy * dy;
-            double Etx = (E_elec + E_amp * d2) * PACKET_SIZE;
+            // gateway -> next gateway (use shared coords)
+            double nx = s_gw_x[nh];
+            double ny = s_gw_y[nh];
+            double dx = gwx - nx;
+            double dy = gwy - ny;
+            double d = sqrt(dx * dx + dy * dy);
+            double Etx = (E_elec + E_amp * d * d) * PACKET_SIZE;
 
-            int r = d_relaysCount[g];
+            int r = d_relaysCount ? d_relaysCount[g] : 0;
             e_inter = (double)r * E_rx + (double)(r + 1) * Etx;
         }
         else {
+            // invalid next hop, preserve behavior: skip
             continue;
         }
 
         double total = e_intra + e_inter;
-        if (total <= 0.0) continue;
-        if (!(energy > 0.0)) continue;
+        if (!(total > 0.0)) continue;      // excludes zero/NaN/neg
+        if (!(energy > 0.0)) continue;     // gateway without energy is ignored
 
         double lifetime = energy / total;
         if (!isfinite(lifetime) || lifetime < 0.0) lifetime = 0.0;
@@ -340,17 +346,8 @@ void ClusteringPSO_CUDA_Block::freeMemory() {
     safeFree(d_clusterRadii);
     safeFree(d_fitness);
 	safeFree(d_relaysCount);
-
-    if (d_sensorOffsets) {
-        CUDA_CALL_BLOCK(cudaFree(d_sensorOffsets));
-        d_sensorOffsets = nullptr;
-    }
-    if (d_sensorAdj) {
-        CUDA_CALL_BLOCK(cudaFree(d_sensorAdj));
-        d_sensorAdj = nullptr;
-    }
-    sensorAdjAllocated = false;
-
+	safeFree(d_sensorOffsets);
+	safeFree(d_sensorAdj);
 }
 
 void ClusteringPSO_CUDA_Block::copyNetworkToDevice() {
@@ -389,7 +386,7 @@ void ClusteringPSO_CUDA_Block::initializeParticles(unsigned long seed) {
     // init curand states for each particle (one state per particle)
     int threads = 256;
     int blocks = (totalParticles + threads - 1) / threads;
-    initCurandKernel << <blocks, threads >> > (d_randStates, seed ^ 0xABCDEFu, totalParticles);
+    initCurandKernel << <blocks, threads >> > (d_randStates, seed, totalParticles);
     CUDA_CALL_BLOCK(cudaGetLastError());
     CUDA_CALL_BLOCK(cudaDeviceSynchronize());
 }
@@ -421,13 +418,28 @@ void ClusteringPSO_CUDA_Block::mergeBlockGBestToHostAndSelect() {
 }
 
 void ClusteringPSO_CUDA_Block::run() {
-    std::cout << "[CUDA][ClusteringPSO_Block] Iniciando (blocks=" << numBlocks << ", swarmPerBlock=" << swarmPerBlock << ")...\n";
+    std::cout << "[CUDA][ClusteringPSO_Block] Iniciando (blocks=" << numBlocks
+        << ", swarmPerBlock=" << swarmPerBlock << ")...\n";
 
-    // --- copiar cluster radii para host (se necessário) ---
+    // ================================================================
+    // CONFIGURAÇÃO DO LOOP (ESCOLHA AQUI)
+    // ================================================================
+
+    #define USE_PSO_TARGET_CRITERIA_BLOCK     // loop novo com alvo (while true)
+    //#define USE_PSO_FIXED_ITER_BLOCK        // loop antigo (for fixo)
+
+    #if !defined(USE_PSO_TARGET_CRITERIA_BLOCK) && !defined(USE_PSO_FIXED_ITER_BLOCK)
+        #define USE_PSO_FIXED_ITER_BLOCK
+    #endif
+
+// ====================================================================
+// INICIALIZAÇÃO (SEU CÓDIGO ORIGINAL – NADA ALTERADO)
+// ====================================================================
+
     std::vector<double> host_clusterRadii(numGateways);
-    // prefer host copy if available (clusterRadiiHost), senão fallback a device -> host copy
     if (!clusterRadiiHost.empty()) {
-        for (int g = 0; g < numGateways; ++g) host_clusterRadii[g] = clusterRadiiHost[g];
+        for (int g = 0; g < numGateways; ++g)
+            host_clusterRadii[g] = clusterRadiiHost[g];
     }
     else {
         CUDA_CALL_BLOCK(cudaMemcpy(host_clusterRadii.data(),
@@ -436,14 +448,12 @@ void ClusteringPSO_CUDA_Block::run() {
             cudaMemcpyDeviceToHost));
     }
 
-
-    // --- construir sensor -> gateway adjacency (HOST) ---
+    // sensor adjacency (host)
     std::vector<int> sensorOffsets(numSensors + 1);
     std::vector<int> sensorAdj;
     sensorOffsets[0] = 0;
-    sensorAdj.reserve((size_t)numSensors * 8); // heurística
+    sensorAdj.reserve((size_t)numSensors * 8);
 
-    // Assumo que você tem uma cópia host de nodes em net.h_nodes (gateway first, then sensors)
     for (int s = 0; s < numSensors; ++s) {
         int count = 0;
         const Node& sensor = net.nodes[numGateways + s];
@@ -454,123 +464,289 @@ void ClusteringPSO_CUDA_Block::run() {
             double dy = gw.y - sensor.y;
             double d2 = dx * dx + dy * dy;
             double r = host_clusterRadii[g];
+
             if (d2 <= r * r) {
                 sensorAdj.push_back(g);
                 count++;
             }
         }
+
         sensorOffsets[s + 1] = sensorOffsets[s] + count;
     }
 
-
-    // --- copiar adjacency para device ---
-    CUDA_CALL_BLOCK(cudaMalloc(&d_sensorOffsets, sizeof(int) * (numSensors + 1)));
-    CUDA_CALL_BLOCK(cudaMalloc(&d_sensorAdj, sizeof(int) * (sensorAdj.size())));
-    CUDA_CALL_BLOCK(cudaMemcpy(d_sensorOffsets, sensorOffsets.data(), sizeof(int) * (numSensors + 1), cudaMemcpyHostToDevice));
-    CUDA_CALL_BLOCK(cudaMemcpy(d_sensorAdj, sensorAdj.data(), sizeof(int) * (sensorAdj.size()), cudaMemcpyHostToDevice));
-    sensorAdjAllocated = true;
-
-    std::cout << "[CLUSTERING] sensorAdj built. totalAdj = " << sensorAdj.size() << "\n";
-
-    // --- restante da inicialização (aloca e inicializa partículas, network->device etc) ---
     allocateMemory();
     copyNetworkToDevice();
-    initializeParticles((unsigned long)time(nullptr));
+    initializeParticles();
 
-    // threads por bloco (mantive seu valor inicial, ajuste se quiser)
-    int threads = 32;
+    CUDA_CALL_BLOCK(cudaMalloc(&d_sensorOffsets, sizeof(int) * (numSensors + 1)));
+    CUDA_CALL_BLOCK(cudaMalloc(&d_sensorAdj, sizeof(int) * (sensorAdj.size())));
+    CUDA_CALL_BLOCK(cudaMemcpy(d_sensorOffsets, sensorOffsets.data(),
+        sizeof(int) * (numSensors + 1), cudaMemcpyHostToDevice));
+    CUDA_CALL_BLOCK(cudaMemcpy(d_sensorAdj, sensorAdj.data(),
+        sizeof(int) * sensorAdj.size(), cudaMemcpyHostToDevice));
+    sensorAdjAllocated = true;
 
     dim3 grid(numBlocks);
-    dim3 block(threads);
+    dim3 block(swarmPerBlock);
 
     h_bestHistory.clear();
     h_bestHistory.reserve(iterations);
 
-    // pré-calcula relays (host) e copia
+    // relaysCount
     std::vector<int> h_relays(numGateways, 0);
     for (int src = 0; src < numGateways; ++src) {
-        int nh = nextHopHost[src]; // ou vetor que você tem
-        if (nh >= 0 && nh < numGateways) h_relays[nh] += 1;
+        int nh = nextHopHost[src];
+        if (nh >= 0 && nh < numGateways) h_relays[nh]++;
     }
+
     CUDA_CALL_BLOCK(cudaMalloc(&d_relaysCount, sizeof(int) * numGateways));
-    CUDA_CALL_BLOCK(cudaMemcpy(d_relaysCount, h_relays.data(), sizeof(int) * numGateways, cudaMemcpyHostToDevice));
+    CUDA_CALL_BLOCK(cudaMemcpy(d_relaysCount, h_relays.data(),
+        sizeof(int) * numGateways, cudaMemcpyHostToDevice));
 
-    // --- loop principal PSO ---
-    for (int it = 0; it < iterations; ++it) {
-        // evaluate (totalParticles threads = numBlocks * swarmPerBlock)
-        int totalParticles_local = totalParticles;
-        int tEval = threads;       // threads por bloco
-        int bEval = numBlocks;     // cada bloco = uma revoada
+    // parâmetros usados apenas na versão target
+    const bool   stopOnTarget = true;
+    const double targetFitness = 2000.0;
+    const int    maxIter = 100000;
+    const int    maxAllowedIterations = 200000;
+    const int    stagnationLimit = 2000;
+    const double maxWallTimeMs = 1000.0 * 60.0 * 30.0;
 
-        // --- shared memory bytes: apenas arrays dos gateways (x,y,E,r2) ---
+    auto t0 = std::chrono::high_resolution_clock::now();
+
+    int lastImprovementIter = 0;
+    double bestSoFar = -1e300;
+
+    // ====================================================================
+    // LOOP PRINCIPAL – ESCOLHIDO VIA #define ACIMA
+    // ====================================================================
+
+
+    // ===============================
+    //     LOOP NOVO — TARGET (WHILE)
+    // ===============================
+#if defined(USE_PSO_TARGET_CRITERIA_BLOCK)
+
+    int it = 0;
+    while (true)
+    {
+        // ================================
+        // (A) EVALUATE
+        // ================================
         size_t sharedMemBytes = sizeof(double) * (size_t)numGateways * 4;
 
-        // tempo do kernel (opcional)
-        // --- Lançar kernel de avaliação que usa adjacency pré-computada ---
-        evaluateClustersBlockKernel << <bEval, tEval, sharedMemBytes >> > (
+        evaluateClustersBlockKernel << <numBlocks, swarmPerBlock, sharedMemBytes >> > (
             d_positions,
             d_fitness,
             totalParticles,
             numSensors,
             numGateways,
-            d_nodes,          // device pointer com nodes (gateway + sensors) -> ajuste se usar graphDev.d_nodes
+            d_nodes,
             d_nextHop,
             d_relaysCount,
             d_clusterRadii,
-            d_sensorOffsets,  // novo
-            d_sensorAdj,      // novo
+            d_sensorOffsets,
+            d_sensorAdj,
             net.bs.x,
             net.bs.y
             );
-
         CUDA_CALL_BLOCK(cudaGetLastError());
         CUDA_CALL_BLOCK(cudaDeviceSynchronize());
 
-        // --- update personal best (por partícula) ---
-        updatePersonalBestKernel_Block << <numBlocks, threads >> > (d_positions, d_pbest, d_fitness, d_pbestFitness, totalParticles, numSensors);
+        // ================================
+        // (B) PERSONAL BEST
+        // ================================
+        updatePersonalBestKernel_Block << <numBlocks, swarmPerBlock >> > (
+            d_positions, d_pbest, d_fitness, d_pbestFitness,
+            totalParticles, numSensors);
         CUDA_CALL_BLOCK(cudaGetLastError());
 
-        // --- compute block-local gbest (one block per revoada) ---
-        size_t sharedBytes2 = (size_t)threads * sizeof(double);
-        computeBlockGBestKernel << <numBlocks, threads, sharedBytes2 >> > (d_pbestFitness, d_pbest, d_gbest_blocks, d_blockBestFitness, swarmPerBlock, numSensors);
+        // ================================
+        // (C) LOCAL GBEST POR BLOCO
+        // ================================
+        size_t sharedBytes2 = sizeof(double) * (size_t)swarmPerBlock;
+        computeBlockGBestKernel << <numBlocks, swarmPerBlock, sharedBytes2 >> > (
+            d_pbestFitness, d_pbest, d_gbest_blocks, d_blockBestFitness,
+            swarmPerBlock, numSensors);
         CUDA_CALL_BLOCK(cudaGetLastError());
         CUDA_CALL_BLOCK(cudaDeviceSynchronize());
 
-        // --- merge block gbest to host and select best among blocks ---
+        // merge block gbests → host
         mergeBlockGBestToHostAndSelect();
 
-        // --- update particles using block-local gbest ---
-        updateParticlesKernel_Block << <numBlocks, threads >> > (d_positions, d_velocities, d_pbest, d_gbest_blocks, d_randStates, totalParticles, numSensors, 0.7968, 1.4962, 1.4962);
+        // ================================
+        // (D) UPDATE PARTICLES
+        // ================================
+        updateParticlesKernel_Block << <numBlocks, swarmPerBlock >> > (
+            d_positions, d_velocities, d_pbest, d_gbest_blocks, d_randStates,
+            totalParticles, numSensors,
+            0.7968, 1.4962, 1.4962
+            );
         CUDA_CALL_BLOCK(cudaGetLastError());
         CUDA_CALL_BLOCK(cudaDeviceSynchronize());
 
-        // For logging: merged best
+        // ================================
+        // (E) GET GLOBAL BEST
+        // ================================
         double mergedBestVal = -1e300;
         {
             std::vector<double> h_blockFitness(numBlocks);
-            CUDA_CALL_BLOCK(cudaMemcpy(h_blockFitness.data(), d_blockBestFitness, sizeof(double) * numBlocks, cudaMemcpyDeviceToHost));
-            for (int b = 0; b < numBlocks; ++b) if (h_blockFitness[b] > mergedBestVal) mergedBestVal = h_blockFitness[b];
+            CUDA_CALL_BLOCK(cudaMemcpy(h_blockFitness.data(), d_blockBestFitness,
+                sizeof(double) * numBlocks, cudaMemcpyDeviceToHost));
+
+            for (int b = 0; b < numBlocks; ++b)
+                if (h_blockFitness[b] > mergedBestVal)
+                    mergedBestVal = h_blockFitness[b];
         }
+
+        if (gbestTimeline.empty() || mergedBestVal > gbestTimeline.back().second)
+        {
+            auto tNow = std::chrono::high_resolution_clock::now();
+            double ms = std::chrono::duration<double, std::milli>(tNow - t0).count();
+
+            gbestTimeline.emplace_back(ms, mergedBestVal);
+            lastImprovementIter = it;
+            bestSoFar = mergedBestVal;
+        }
+
         h_bestHistory.push_back(mergedBestVal);
 
-        if (it % 10 == 0) std::cout << "[CUDA][ClusteringPSO_Block] iter " << it << " merged_best = " << mergedBestVal << "\n";
-    } // end iterations
+        // ================================
+        // (F) CRITÉRIOS DE PARADA
+        // ================================
+        if (stopOnTarget && mergedBestVal >= targetFitness) {
+            auto tNow = std::chrono::high_resolution_clock::now();
+            double ms = std::chrono::duration<double, std::milli>(tNow - t0).count();
+            printf("Parou: atingiu targetFitness em %.2f ms (iter=%d)\n", ms, it);
+            break;
+        }
 
-    // final merge & cache
+        if (it >= maxIter) {
+            printf("Parou: maxIter atingido.\n");
+            break;
+        }
+
+        if ((it - lastImprovementIter) >= stagnationLimit) {
+            printf("Parou: estagnação. Fitness: %.2f\n", mergedBestVal);
+            break;
+        }
+
+        if (it >= maxAllowedIterations) {
+            printf("Parou: maxAllowedIterations.\n");
+            break;
+        }
+
+        {
+            auto tNow = std::chrono::high_resolution_clock::now();
+            double elapsed = std::chrono::duration<double, std::milli>(tNow - t0).count();
+            if (elapsed >= maxWallTimeMs) {
+                printf("Parou: timeout.\n");
+                break;
+            }
+        }
+
+        ++it;
+    }
+
+    // ===============================
+    //     LOOP ANTIGO — FIXO (FOR)
+    // ===============================
+#elif defined(USE_PSO_FIXED_ITER_BLOCK)
+
+    for (int it = 0; it < iterations; ++it)
+    {
+        size_t sharedMemBytes = sizeof(double) * (size_t)numGateways * 4;
+
+        evaluateClustersBlockKernel << <numBlocks, swarmPerBlock, sharedMemBytes >> > (
+            d_positions,
+            d_fitness,
+            totalParticles,
+            numSensors,
+            numGateways,
+            d_nodes,
+            d_nextHop,
+            d_relaysCount,
+            d_clusterRadii,
+            d_sensorOffsets,
+            d_sensorAdj,
+            net.bs.x,
+            net.bs.y
+            );
+        CUDA_CALL_BLOCK(cudaGetLastError());
+        CUDA_CALL_BLOCK(cudaDeviceSynchronize());
+
+        updatePersonalBestKernel_Block << <numBlocks, swarmPerBlock >> > (
+            d_positions, d_pbest, d_fitness, d_pbestFitness,
+            totalParticles, numSensors);
+        CUDA_CALL_BLOCK(cudaGetLastError());
+
+        size_t sharedBytes2 = sizeof(double) * (size_t)swarmPerBlock;
+        computeBlockGBestKernel << <numBlocks, swarmPerBlock, sharedBytes2 >> > (
+            d_pbestFitness, d_pbest, d_gbest_blocks, d_blockBestFitness,
+            swarmPerBlock, numSensors);
+        CUDA_CALL_BLOCK(cudaGetLastError());
+        CUDA_CALL_BLOCK(cudaDeviceSynchronize());
+
+        mergeBlockGBestToHostAndSelect();
+
+        updateParticlesKernel_Block << <numBlocks, swarmPerBlock >> > (
+            d_positions, d_velocities, d_pbest, d_gbest_blocks,
+            d_randStates, totalParticles, numSensors,
+            0.7968, 1.4962, 1.4962
+            );
+        CUDA_CALL_BLOCK(cudaGetLastError());
+        CUDA_CALL_BLOCK(cudaDeviceSynchronize());
+
+        double mergedBestVal = -1e300;
+        {
+            std::vector<double> h_blockFitness(numBlocks);
+            CUDA_CALL_BLOCK(cudaMemcpy(h_blockFitness.data(), d_blockBestFitness,
+                sizeof(double) * numBlocks,
+                cudaMemcpyDeviceToHost));
+
+            for (int b = 0; b < numBlocks; ++b)
+                if (h_blockFitness[b] > mergedBestVal)
+                    mergedBestVal = h_blockFitness[b];
+        }
+
+        if (gbestTimeline.empty() || mergedBestVal > gbestTimeline.back().second) {
+            auto tNow = std::chrono::high_resolution_clock::now();
+            double ms = std::chrono::duration<double, std::milli>(tNow - t0).count();
+            gbestTimeline.emplace_back(ms, mergedBestVal);
+        }
+
+        h_bestHistory.push_back(mergedBestVal);
+    }
+
+#endif  // escolha do loop
+
+
+    // ====================================================================
+    // FINALIZAÇÃO — SEU CÓDIGO ORIGINAL
+    // ====================================================================
+
+    auto tEnd = std::chrono::high_resolution_clock::now();
+    double total_ms = std::chrono::duration<double, std::milli>(tEnd - t0).count();
+
     mergeBlockGBestToHostAndSelect();
 
-    // export convergence
-    std::ofstream csv("pso_convergence_gpu_clustering_block.csv");
-    csv << "iteration,best_fitness\n";
-    for (int i = 0; i < (int)h_bestHistory.size(); ++i) csv << i << "," << h_bestHistory[i] << "\n";
-    csv.close();
+    // export converge
+    {
+        std::ofstream csv("pso_convergence_gpu_clustering_block.csv");
+        csv << "iteration,best_fitness\n";
+        for (int i = 0; i < (int)h_bestHistory.size(); ++i)
+            csv << i << "," << h_bestHistory[i] << "\n";
+    }
 
-    std::cout << "[CUDA][ClusteringPSO_Block] finalizado. melhor fitness final = "
-        << (h_bestHistory.empty() ? 0.0 : h_bestHistory.back()) << "\n";
+    // export timeline
+    {
+        std::ofstream out("gbest_timeline_gpu_block.csv");
+        out << "time_ms,fitness\n";
+        for (auto& p : gbestTimeline)
+            out << p.first << "," << p.second << "\n";
+        out << "END," << total_ms << "\n";
+    }
 
     std::vector<double> bestPos(numSensors);
-
-    // bestBlockIdx foi definido dentro de mergeBlockGBestToHostAndSelect()
     CUDA_CALL_BLOCK(cudaMemcpy(
         bestPos.data(),
         d_gbest_blocks + (size_t)bestBlockIdx * (size_t)numSensors,
@@ -578,11 +754,8 @@ void ClusteringPSO_CUDA_Block::run() {
         cudaMemcpyDeviceToHost
     ));
 
-    // ============================================================
-    // DECODE CLUSTERING DO BEST POS
-    // ============================================================
+    // decode clustering final
     std::vector<int> assignmentGPUBlock(numSensors);
-
     for (int s = 0; s < numSensors; ++s) {
         int start = sensorOffsets[s];
         int end = sensorOffsets[s + 1];
@@ -598,9 +771,6 @@ void ClusteringPSO_CUDA_Block::run() {
         assignmentGPUBlock[s] = assigned;
     }
 
-    // ============================================================
-    // EXPORTAR RESULTADOS
-    // ============================================================
     exportNetworkAndLinksToCSV(
         net,
         "gpu_block_network.csv",
@@ -609,18 +779,19 @@ void ClusteringPSO_CUDA_Block::run() {
         clusterRadiiHost
     );
 
-
-    // --- liberar adjacency (se ainda alocado) ---
     if (sensorAdjAllocated) {
         CUDA_CALL_BLOCK(cudaFree(d_sensorOffsets));
         CUDA_CALL_BLOCK(cudaFree(d_sensorAdj));
-        d_sensorOffsets = nullptr;
-        d_sensorAdj = nullptr;
+
+        d_sensorOffsets = nullptr;   // <--- ESSENCIAL
+        d_sensorAdj = nullptr;   // <--- ESSENCIAL
         sensorAdjAllocated = false;
     }
 
+
     freeMemory();
 }
+
 
 
 std::vector<double> ClusteringPSO_CUDA_Block::getGBestHost() const {

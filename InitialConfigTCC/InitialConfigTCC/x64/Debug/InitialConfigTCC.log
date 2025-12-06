@@ -1,4 +1,56 @@
-﻿  main.cpp
+﻿  Compiling CUDA source file clustering_pso_cuda.cu...
+  
+  C:\Users\jpmar\source\repos\parallelizing_wsn_pso_sollution\InitialConfigTCC>"C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v12.6\bin\nvcc.exe" -gencode=arch=compute_52,code=\"sm_52,compute_52\" --use-local-env -ccbin "C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\bin\HostX64\x64" -x cu   -I"C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v12.6\include" -I"C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v12.6\include" -I"C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v12.6\include" -I"C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v12.6\include"  -G   --keep-dir InitialConfigTCC\x64\Debug  -maxrregcount=0   --machine 64 --compile -cudart static -Xptxas -v -g  -DUSE_CUDA -D_DEBUG -D_CONSOLE -D_UNICODE -DUNICODE -Xcompiler "/EHsc /W3 /nologo /Od /FS /Zi /RTC1 /MDd " -Xcompiler "/FdInitialConfigTCC\x64\Debug\vc143.pdb" -o C:\Users\jpmar\source\repos\parallelizing_wsn_pso_sollution\InitialConfigTCC\InitialConfigTCC\x64\Debug\clustering_pso_cuda.cu.obj "C:\Users\jpmar\source\repos\parallelizing_wsn_pso_sollution\InitialConfigTCC\clustering_pso_cuda.cu" 
+C:\Users\jpmar\source\repos\parallelizing_wsn_pso_sollution\InitialConfigTCC\clustering_pso_cuda.cu(27): warning #177-D: variable "state" was declared but never referenced
+        curandState state;
+                    ^
+  
+  Remark: The warnings can be suppressed with "-diag-suppress <warning-number>"
+  
+  ptxas info    : 218048 bytes gmem, 72 bytes cmem[3]
+  ptxas info    : Compiling entry function '_Z24initParticlesClustKernelPdS_iim' for 'sm_52'
+  ptxas info    : Function properties for _Z24initParticlesClustKernelPdS_iim
+      48 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+  ptxas info    : Used 44 registers, used 0 barriers, 48 bytes cumulative stack size, 348 bytes cmem[0], 56 bytes cmem[2]
+  ptxas info    : Compiling entry function '_Z19assignSensorsKernelPKdPiiiiPK7NodeGPUS0_' for 'sm_52'
+  ptxas info    : Function properties for _Z19assignSensorsKernelPKdPiiiiPK7NodeGPUS0_
+      0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+  ptxas info    : Used 48 registers, used 0 barriers, 368 bytes cmem[0], 32 bytes cmem[2]
+  ptxas info    : Compiling entry function '_Z19countClustersKernelPKiPiiii' for 'sm_52'
+  ptxas info    : Function properties for _Z19countClustersKernelPKiPiiii
+      0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+  ptxas info    : Used 26 registers, used 0 barriers, 16 bytes cumulative stack size, 348 bytes cmem[0]
+  ptxas info    : Compiling entry function '_Z31computeFitnessPerParticleKernelPKiPdiiPK7NodeGPUS0_S0_ddd' for 'sm_52'
+  ptxas info    : Function properties for _Z31computeFitnessPerParticleKernelPKiPdiiPK7NodeGPUS0_S0_ddd
+      0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+  ptxas info    : Used 88 registers, used 0 barriers, 8 bytes cumulative stack size, 392 bytes cmem[0], 56 bytes cmem[2]
+  ptxas info    : Compiling entry function '_Z22evaluateClustersKernelPKdPdiiiPK7NodeGPUPKiS0_ddd' for 'sm_52'
+  ptxas info    : Function properties for _Z22evaluateClustersKernelPKdPdiiiPK7NodeGPUPKiS0_ddd
+      0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+  ptxas info    : Used 110 registers, used 0 barriers, 8 bytes cumulative stack size, 400 bytes cmem[0], 56 bytes cmem[2]
+  ptxas info    : Compiling entry function '_Z30updatePersonalBestKernel_ClustPKdPdS0_S1_ii' for 'sm_52'
+  ptxas info    : Function properties for _Z30updatePersonalBestKernel_ClustPKdPdS0_S1_ii
+      0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+  ptxas info    : Used 18 registers, used 0 barriers, 360 bytes cmem[0]
+  ptxas info    : Compiling entry function '_Z27updateParticlesKernel_ClustPdS_PKdS1_P17curandStateXORWOWiiddd' for 'sm_52'
+  ptxas info    : Function properties for _Z27updateParticlesKernel_ClustPdS_PKdS1_P17curandStateXORWOWiiddd
+      96 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+  ptxas info    : Used 43 registers, used 0 barriers, 96 bytes cumulative stack size, 392 bytes cmem[0]
+  ptxas info    : Function properties for sqrt
+      0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+  ptxas info    : Function properties for __iAtomicAdd
+      0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+  ptxas info    : Function properties for __finite
+      0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+  ptxas info    : Function properties for __isfinited
+      0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+  ptxas info    : Function properties for _ZN53_INTERNAL_5b2bf7f4_22_clustering_pso_cuda_cu_be25e5ab8isfiniteEd
+      8 bytes stack frame, 8 bytes spill stores, 8 bytes spill loads
+  ptxas info    : Function properties for _ZN53_INTERNAL_5b2bf7f4_22_clustering_pso_cuda_cu_be25e5ab9atomicAddEPii
+      16 bytes stack frame, 12 bytes spill stores, 12 bytes spill loads
+  clustering_pso_cuda.cu
+  tmpxft_000023c4_00000000-7_clustering_pso_cuda.cudafe1.cpp
+  main.cpp
 C:\Users\jpmar\source\repos\parallelizing_wsn_pso_sollution\InitialConfigTCC\export.cpp(16,18): warning C4267: 'inicializando': conversão de 'size_t' para 'int', possível perda de dados
   (compilando o arquivo fonte 'main.cpp')
   
@@ -16,7 +68,7 @@ C:\Users\jpmar\source\repos\parallelizing_wsn_pso_sollution\InitialConfigTCC\rou
       C:\Users\jpmar\source\repos\parallelizing_wsn_pso_sollution\InitialConfigTCC\routing_pso_cuda.hpp(11,9):
       ver a definição anterior de "CUDA_CALL"
   
-C:\Users\jpmar\source\repos\parallelizing_wsn_pso_sollution\InitialConfigTCC\clustering_pso_cuda.hpp(12,9): warning C4005: 'CUDA_CALL': redefinição de macro
+C:\Users\jpmar\source\repos\parallelizing_wsn_pso_sollution\InitialConfigTCC\clustering_pso_cuda.hpp(14,9): warning C4005: 'CUDA_CALL': redefinição de macro
   (compilando o arquivo fonte 'main.cpp')
       C:\Users\jpmar\source\repos\parallelizing_wsn_pso_sollution\InitialConfigTCC\routing_pso_block_cuda.hpp(16,9):
       ver a definição anterior de "CUDA_CALL"

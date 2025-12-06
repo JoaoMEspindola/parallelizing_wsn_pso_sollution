@@ -3,20 +3,12 @@
   "WorkspaceRootPath": "C:\\Users\\jpmar\\source\\repos\\parallelizing_wsn_pso_sollution\\InitialConfigTCC\\",
   "Documents": [
     {
-      "AbsoluteMoniker": "D:0:0:{D8C9C0EA-5BBB-4CCB-AA85-4769B24F9862}|InitialConfigTCC.vcxproj|C:\\Users\\jpmar\\source\\repos\\parallelizing_wsn_pso_sollution\\InitialConfigTCC\\export.hpp||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}",
-      "RelativeMoniker": "D:0:0:{D8C9C0EA-5BBB-4CCB-AA85-4769B24F9862}|InitialConfigTCC.vcxproj|solutionrelative:export.hpp||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{D8C9C0EA-5BBB-4CCB-AA85-4769B24F9862}|InitialConfigTCC.vcxproj|C:\\Users\\jpmar\\source\\repos\\parallelizing_wsn_pso_sollution\\InitialConfigTCC\\export.cpp||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}",
-      "RelativeMoniker": "D:0:0:{D8C9C0EA-5BBB-4CCB-AA85-4769B24F9862}|InitialConfigTCC.vcxproj|solutionrelative:export.cpp||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}"
+      "AbsoluteMoniker": "D:0:0:{D8C9C0EA-5BBB-4CCB-AA85-4769B24F9862}|InitialConfigTCC.vcxproj|C:\\Users\\jpmar\\source\\repos\\parallelizing_wsn_pso_sollution\\InitialConfigTCC\\main.cpp||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}",
+      "RelativeMoniker": "D:0:0:{D8C9C0EA-5BBB-4CCB-AA85-4769B24F9862}|InitialConfigTCC.vcxproj|solutionrelative:main.cpp||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}"
     },
     {
       "AbsoluteMoniker": "D:0:0:{D8C9C0EA-5BBB-4CCB-AA85-4769B24F9862}|InitialConfigTCC.vcxproj|C:\\Users\\jpmar\\source\\repos\\parallelizing_wsn_pso_sollution\\InitialConfigTCC\\clustering_pso_cuda.cu||{8B382828-6202-11D1-8870-0000F87579D2}",
       "RelativeMoniker": "D:0:0:{D8C9C0EA-5BBB-4CCB-AA85-4769B24F9862}|InitialConfigTCC.vcxproj|solutionrelative:clustering_pso_cuda.cu||{8B382828-6202-11D1-8870-0000F87579D2}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{D8C9C0EA-5BBB-4CCB-AA85-4769B24F9862}|InitialConfigTCC.vcxproj|C:\\Users\\jpmar\\source\\repos\\parallelizing_wsn_pso_sollution\\InitialConfigTCC\\clustering_pso.hpp||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}",
-      "RelativeMoniker": "D:0:0:{D8C9C0EA-5BBB-4CCB-AA85-4769B24F9862}|InitialConfigTCC.vcxproj|solutionrelative:clustering_pso.hpp||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}"
     },
     {
       "AbsoluteMoniker": "D:0:0:{D8C9C0EA-5BBB-4CCB-AA85-4769B24F9862}|InitialConfigTCC.vcxproj|C:\\Users\\jpmar\\source\\repos\\parallelizing_wsn_pso_sollution\\InitialConfigTCC\\clustering_pso_cuda_blocks.cu||{8B382828-6202-11D1-8870-0000F87579D2}",
@@ -39,66 +31,40 @@
             {
               "$type": "Document",
               "DocumentIndex": 0,
-              "Title": "export.hpp",
-              "DocumentMoniker": "C:\\Users\\jpmar\\source\\repos\\parallelizing_wsn_pso_sollution\\InitialConfigTCC\\export.hpp",
-              "RelativeDocumentMoniker": "export.hpp",
-              "ToolTip": "C:\\Users\\jpmar\\source\\repos\\parallelizing_wsn_pso_sollution\\InitialConfigTCC\\export.hpp",
-              "RelativeToolTip": "export.hpp",
-              "ViewState": "AgIAAAAAAAAAAAAAAAAAAA0AAAAuAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000680|",
-              "WhenOpened": "2025-11-17T19:41:35.763Z",
+              "Title": "main.cpp",
+              "DocumentMoniker": "C:\\Users\\jpmar\\source\\repos\\parallelizing_wsn_pso_sollution\\InitialConfigTCC\\main.cpp",
+              "RelativeDocumentMoniker": "main.cpp",
+              "ToolTip": "C:\\Users\\jpmar\\source\\repos\\parallelizing_wsn_pso_sollution\\InitialConfigTCC\\main.cpp",
+              "RelativeToolTip": "main.cpp",
+              "ViewState": "AgIAACoAAAAAAAAAAAAAAEwAAAA2AAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000677|",
+              "WhenOpened": "2025-11-27T17:21:12.943Z",
               "EditorCaption": ""
             },
             {
               "$type": "Document",
               "DocumentIndex": 1,
-              "Title": "export.cpp",
-              "DocumentMoniker": "C:\\Users\\jpmar\\source\\repos\\parallelizing_wsn_pso_sollution\\InitialConfigTCC\\export.cpp",
-              "RelativeDocumentMoniker": "export.cpp",
-              "ToolTip": "C:\\Users\\jpmar\\source\\repos\\parallelizing_wsn_pso_sollution\\InitialConfigTCC\\export.cpp",
-              "RelativeToolTip": "export.cpp",
-              "ViewState": "AgIAAAAAAAAAAAAAAAAAAGgAAAAmAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000677|",
-              "WhenOpened": "2025-11-17T19:41:30.884Z",
-              "EditorCaption": ""
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 3,
-              "Title": "clustering_pso.hpp",
-              "DocumentMoniker": "C:\\Users\\jpmar\\source\\repos\\parallelizing_wsn_pso_sollution\\InitialConfigTCC\\clustering_pso.hpp",
-              "RelativeDocumentMoniker": "clustering_pso.hpp",
-              "ToolTip": "C:\\Users\\jpmar\\source\\repos\\parallelizing_wsn_pso_sollution\\InitialConfigTCC\\clustering_pso.hpp",
-              "RelativeToolTip": "clustering_pso.hpp",
-              "ViewState": "AgIAACoAAAAAAAAAAAAAADoAAAAOAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000680|",
-              "WhenOpened": "2025-11-17T19:39:55.093Z",
-              "EditorCaption": ""
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 2,
               "Title": "clustering_pso_cuda.cu",
               "DocumentMoniker": "C:\\Users\\jpmar\\source\\repos\\parallelizing_wsn_pso_sollution\\InitialConfigTCC\\clustering_pso_cuda.cu",
               "RelativeDocumentMoniker": "clustering_pso_cuda.cu",
               "ToolTip": "C:\\Users\\jpmar\\source\\repos\\parallelizing_wsn_pso_sollution\\InitialConfigTCC\\clustering_pso_cuda.cu",
               "RelativeToolTip": "clustering_pso_cuda.cu",
-              "ViewState": "AgIAAGcCAAAAAAAAAAAwwIYCAAAWAAAAAAAAAA==",
+              "ViewState": "AgIAAL4BAAAAAAAAAAAAwPABAAAUAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.001001|",
-              "WhenOpened": "2025-11-17T19:32:09.855Z",
+              "WhenOpened": "2025-12-02T03:05:07.17Z",
               "EditorCaption": ""
             },
             {
               "$type": "Document",
-              "DocumentIndex": 4,
+              "DocumentIndex": 2,
               "Title": "clustering_pso_cuda_blocks.cu",
               "DocumentMoniker": "C:\\Users\\jpmar\\source\\repos\\parallelizing_wsn_pso_sollution\\InitialConfigTCC\\clustering_pso_cuda_blocks.cu",
               "RelativeDocumentMoniker": "clustering_pso_cuda_blocks.cu",
               "ToolTip": "C:\\Users\\jpmar\\source\\repos\\parallelizing_wsn_pso_sollution\\InitialConfigTCC\\clustering_pso_cuda_blocks.cu",
               "RelativeToolTip": "clustering_pso_cuda_blocks.cu",
-              "ViewState": "AgIAAEoCAAAAAAAAAAAAAGECAAAGAAAAAAAAAA==",
+              "ViewState": "AgIAAOYBAAAAAAAAAAAAwPsBAAAjAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.001001|",
-              "WhenOpened": "2025-11-17T19:17:23.529Z",
+              "WhenOpened": "2025-12-03T02:03:38.493Z",
               "EditorCaption": ""
             }
           ]

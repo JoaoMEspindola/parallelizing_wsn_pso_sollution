@@ -489,10 +489,12 @@ void ClusteringPSO_CUDA::run() {
             int nh = nextHopHost[src];
             if (nh >= 0 && nh < numGateways) h_relays[nh]++;
         }
-        CUDA_CALL(cudaMemcpy(d_relaysCount, h_relays.data(), sizeof(int) * (size_t)numGateways, cudaMemcpyHostToDevice));
+        CUDA_CALL(cudaMemcpy(d_relaysCount, h_relays.data(),
+            sizeof(int) * (size_t)numGateways,
+            cudaMemcpyHostToDevice));
     }
 
-    dim3 threads(256);
+    dim3 threads(512);
     dim3 blocksParticles((swarmSize + threads.x - 1) / threads.x);
 
     // para kernels assign/count (cada thread = particle*sensor)
@@ -506,44 +508,79 @@ void ClusteringPSO_CUDA::run() {
     // controle do melhor global (host)
     double globalBestVal = -1e300;
 
-    for (int it = 0; it < iterations; ++it) {
+    // ============================================================
+    //   CONFIGURAÇÃO DO LOOP (Thread) - escolha aqui
+    // ============================================================
+
+     #define USE_PSO_TARGET_CRITERIA   // loop novo: para por target / timeout / estagnação
+    //#define USE_PSO_FIXED_ITER           // loop antigo: iterações fixas (iterations)
+
+    #if !defined(USE_PSO_TARGET_CRITERIA) && !defined(USE_PSO_FIXED_ITER)
+        #define USE_PSO_FIXED_ITER
+    #endif
+
+// ----------------- parâmetros exclusivos do loop novo -----------------
+#if defined(USE_PSO_TARGET_CRITERIA)
+    const bool   stopOnTarget = true;             // se true usa targetFitness como critério
+    const double targetFitness = 2000.0;           // fitness alvo
+    const bool   useMaxIter = true;             // critério alternativo de iterações
+    const int    maxIter = 100000;            // número máximo de iterações "esperadas"
+    const int    maxAllowedIterations = 200000;        // fallback absoluto
+    const double maxWallTimeMs = 1000.0 * 60.0 * 30.0; // 30 minutos
+    const int    stagnationLimit = 2000;             // sem melhoria por N iterações -> parar
+
+    int  iter = 0;
+    int  lastImprovementIter = 0;
+#endif
+
+    auto t0 = std::chrono::high_resolution_clock::now();
+
+    // ============================================================
+    //   LOOP PRINCIPAL DO PSO (Thread)
+    // ============================================================
+
+#if defined(USE_PSO_TARGET_CRITERIA)
+
+// ============================
+//   LOOP NOVO (while true)
+// ============================
+    while (true) {
         // ---------- (A) Pipeline: assign -> count -> computeFitness ----------
+        CUDA_CALL(cudaMemset(d_clusterSizes, 0,
+            sizeof(int) * (size_t)swarmSize * (size_t)numGateways));
 
-        // 1) limpar clusterSizes (swarmSize * numGateways)
-        CUDA_CALL(cudaMemset(d_clusterSizes, 0, sizeof(int) * (size_t)swarmSize * (size_t)numGateways));
-
-        // 2) assignSensorsKernel: cada thread = (particle,sensor)
-        assignSensorsKernel<<<blocksAssign, threads>>>(
+        assignSensorsKernel << <blocksAssign, threads >> > (
             d_positions, d_assignment, swarmSize, numSensors, numGateways,
             d_nodes, d_clusterRadii);
         CUDA_CALL(cudaGetLastError());
 
-        // 3) countClustersKernel: cada thread = (particle,sensor) -> atomic para d_clusterSizes
-        countClustersKernel<<<blocksAssign, threads>>>(
+        countClustersKernel << <blocksAssign, threads >> > (
             d_assignment, d_clusterSizes, swarmSize, numSensors, numGateways);
         CUDA_CALL(cudaGetLastError());
 
-        // 4) computeFitnessPerParticleKernel: cada thread = 1 particle
-        computeFitnessPerParticleKernel<<<blocksParticles, threads>>>(
+        computeFitnessPerParticleKernel << <blocksParticles, threads >> > (
             d_clusterSizes, d_fitness, swarmSize, numGateways,
-            d_nodes, d_nextHop, d_relaysCount, net.bs.x, net.bs.y, net.gatewayRange);
+            d_nodes, d_nextHop, d_relaysCount,
+            net.bs.x, net.bs.y, net.gatewayRange);
         CUDA_CALL(cudaGetLastError());
 
         CUDA_CALL(cudaDeviceSynchronize());
 
         // ---------- (B) atualizar pbest (cada thread = 1 particle) ----------
-        updatePersonalBestKernel_Clust<<<blocksParticles, threads>>>(
-            d_positions, d_pbest, d_fitness, d_pbestFitness, swarmSize, numSensors);
+        updatePersonalBestKernel_Clust << <blocksParticles, threads >> > (
+            d_positions, d_pbest, d_fitness, d_pbestFitness,
+            swarmSize, numSensors);
         CUDA_CALL(cudaGetLastError());
         CUDA_CALL(cudaDeviceSynchronize());
 
         // ---------- (C) host-side argmax sobre PBEST FITNESS e atualização condicional do GBEST ----------
         {
             std::vector<double> h_pbestFitness(swarmSize);
-            CUDA_CALL(cudaMemcpy(h_pbestFitness.data(), d_pbestFitness, sizeof(double) * (size_t)swarmSize, cudaMemcpyDeviceToHost));
+            CUDA_CALL(cudaMemcpy(h_pbestFitness.data(), d_pbestFitness,
+                sizeof(double) * (size_t)swarmSize,
+                cudaMemcpyDeviceToHost));
 
-            // encontra melhor pbestFitness
-            int bestIndex = 0;
+            int    bestIndex = 0;
             double bestValIter = h_pbestFitness[0];
             for (int i = 1; i < swarmSize; ++i) {
                 if (h_pbestFitness[i] > bestValIter) {
@@ -552,44 +589,185 @@ void ClusteringPSO_CUDA::run() {
                 }
             }
 
-            // atualiza global somente se melhorou
             if (bestValIter > globalBestVal) {
                 globalBestVal = bestValIter;
-                size_t bytes = sizeof(double) * (size_t)numSensors;
+                lastImprovementIter = iter;
+
+                auto   tNow = std::chrono::high_resolution_clock::now();
+                double ms = std::chrono::duration<double, std::milli>(tNow - t0).count();
+                gbestTimeline.emplace_back(ms, globalBestVal);
+
+                size_t  bytes = sizeof(double) * (size_t)numSensors;
                 double* src = d_pbest + (size_t)bestIndex * (size_t)numSensors;
                 CUDA_CALL(cudaMemcpy(d_gbest, src, bytes, cudaMemcpyDeviceToDevice));
             }
 
-            // armazenar o melhor global atual
+            // armazenar o melhor global atual (mesmo que não tenha mudado)
             h_bestHistory.push_back(globalBestVal);
         }
 
+        // ---------- Critérios de parada (após atualização do GBEST) ----------
+        {
+            // 1) Se alcançou o target (caso esteja ativado)
+            if (stopOnTarget && globalBestVal >= targetFitness) {
+                auto   tNow = std::chrono::high_resolution_clock::now();
+                double ms = std::chrono::duration<double, std::milli>(tNow - t0).count();
+                printf("Parando: atingiu targetFitness (%.3f) em %.3f ms (iter=%d)\n",
+                    globalBestVal, ms, iter);
+                break;
+            }
+
+            // 2) Critério clássico de iterações
+            if (useMaxIter && iter >= maxIter) {
+                auto   tNow = std::chrono::high_resolution_clock::now();
+                double ms = std::chrono::duration<double, std::milli>(tNow - t0).count();
+                printf("Parando: atingiu maxIter (%d) em %.3f ms\n", iter, ms);
+                break;
+            }
+
+            // 3) Fallback absoluto por iterações
+            if (iter >= maxAllowedIterations) {
+                auto   tNow = std::chrono::high_resolution_clock::now();
+                double ms = std::chrono::duration<double, std::milli>(tNow - t0).count();
+                printf("Parando por segurança: maxAllowedIterations (%d) alcançado em %.3f ms\n",
+                    iter, ms);
+                break;
+            }
+
+            // 4) Fallback por tempo de wall-clock
+            {
+                auto   tNow = std::chrono::high_resolution_clock::now();
+                double elapsedMs = std::chrono::duration<double, std::milli>(tNow - t0).count();
+                if (elapsedMs >= maxWallTimeMs) {
+                    printf("Parando por segurança: timeout de %.0f ms alcançado (%.3f ms)\n",
+                        maxWallTimeMs, elapsedMs);
+                    break;
+                }
+            }
+
+            // 5) Estagnação (nenhuma melhoria por N iterações)
+            if ((iter - lastImprovementIter) >= stagnationLimit) {
+                auto   tNow = std::chrono::high_resolution_clock::now();
+                double ms = std::chrono::duration<double, std::milli>(tNow - t0).count();
+                printf("Parando por estagnação: sem melhoria por %d iters (iter=%d) em %.3f ms. Fitness: %.2f\n", stagnationLimit, iter, ms, globalBestVal);
+                break;
+            }
+        }
+
         // ---------- (D) atualizar partículas (vel/pos) ----------
-        updateParticlesKernel_Clust<<<blocksParticles, threads>>>(
+        updateParticlesKernel_Clust << <blocksParticles, threads >> > (
             d_positions, d_velocities, d_pbest, d_gbest, d_randStates,
             swarmSize, numSensors, 0.7968, 1.4962, 1.4962);
         CUDA_CALL(cudaGetLastError());
-
         CUDA_CALL(cudaDeviceSynchronize());
 
-        if (it % 10 == 0)
-            std::cout << "[CUDA][ClusteringPSO] iter " << it << " globalBest = " << globalBestVal << "\n";
+        ++iter;
     }
+
+#elif defined(USE_PSO_FIXED_ITER)
+
+// ============================
+//   LOOP ANTIGO (for fixo)
+// ============================
+    for (int iter = 0; iter < iterations; ++iter) {
+        // ---------- (A) Pipeline: assign -> count -> computeFitness ----------
+        CUDA_CALL(cudaMemset(d_clusterSizes, 0,
+            sizeof(int) * (size_t)swarmSize * (size_t)numGateways));
+
+        assignSensorsKernel << <blocksAssign, threads >> > (
+            d_positions, d_assignment, swarmSize, numSensors, numGateways,
+            d_nodes, d_clusterRadii);
+        CUDA_CALL(cudaGetLastError());
+
+        countClustersKernel << <blocksAssign, threads >> > (
+            d_assignment, d_clusterSizes, swarmSize, numSensors, numGateways);
+        CUDA_CALL(cudaGetLastError());
+
+        computeFitnessPerParticleKernel << <blocksParticles, threads >> > (
+            d_clusterSizes, d_fitness, swarmSize, numGateways,
+            d_nodes, d_nextHop, d_relaysCount,
+            net.bs.x, net.bs.y, net.gatewayRange);
+        CUDA_CALL(cudaGetLastError());
+        CUDA_CALL(cudaDeviceSynchronize());
+
+        // ---------- (B) atualizar pbest ----------
+        updatePersonalBestKernel_Clust << <blocksParticles, threads >> > (
+            d_positions, d_pbest, d_fitness, d_pbestFitness,
+            swarmSize, numSensors);
+        CUDA_CALL(cudaGetLastError());
+        CUDA_CALL(cudaDeviceSynchronize());
+
+        // ---------- (C) host-side argmax + gbest ----------
+        {
+            std::vector<double> h_pbestFitness(swarmSize);
+            CUDA_CALL(cudaMemcpy(h_pbestFitness.data(), d_pbestFitness,
+                sizeof(double) * (size_t)swarmSize,
+                cudaMemcpyDeviceToHost));
+
+            int    bestIndex = 0;
+            double bestValIter = h_pbestFitness[0];
+            for (int i = 1; i < swarmSize; ++i) {
+                if (h_pbestFitness[i] > bestValIter) {
+                    bestValIter = h_pbestFitness[i];
+                    bestIndex = i;
+                }
+            }
+
+            if (bestValIter > globalBestVal) {
+                globalBestVal = bestValIter;
+
+                auto   tNow = std::chrono::high_resolution_clock::now();
+                double ms = std::chrono::duration<double, std::milli>(tNow - t0).count();
+                gbestTimeline.emplace_back(ms, globalBestVal);
+
+                size_t  bytes = sizeof(double) * (size_t)numSensors;
+                double* src = d_pbest + (size_t)bestIndex * (size_t)numSensors;
+                CUDA_CALL(cudaMemcpy(d_gbest, src, bytes, cudaMemcpyDeviceToDevice));
+            }
+
+            h_bestHistory.push_back(globalBestVal);
+        }
+
+        // ---------- (D) atualizar partículas ----------
+        updateParticlesKernel_Clust << <blocksParticles, threads >> > (
+            d_positions, d_velocities, d_pbest, d_gbest, d_randStates,
+            swarmSize, numSensors, 0.7968, 1.4962, 1.4962);
+        CUDA_CALL(cudaGetLastError());
+        CUDA_CALL(cudaDeviceSynchronize());
+    }
+
+#endif // fim escolha de loop
+
+    // ============================================================
+    // PÓS-LOOP: export, decode, etc. (seu código original)
+    // ============================================================
+    auto tEnd = std::chrono::high_resolution_clock::now();
+    double total_ms = std::chrono::duration<double, std::milli>(tEnd - t0).count();
 
     // export converge
     {
         std::ofstream csv("pso_convergence_gpu_clustering.csv");
         csv << "iteration,best_fitness\n";
-        for (int i = 0; i < (int)h_bestHistory.size(); ++i) csv << i << "," << h_bestHistory[i] << "\n";
+        for (int i = 0; i < (int)h_bestHistory.size(); ++i)
+            csv << i << "," << h_bestHistory[i] << "\n";
         csv.close();
     }
 
-    std::cout << "[CUDA][ClusteringPSO] finalizado. melhor fitness final = " << (h_bestHistory.empty() ? 0.0 : h_bestHistory.back()) << "\n";
+    {
+        std::ofstream out("gbest_timeline_gpu.csv");
+        out << "time_ms,fitness\n";
+        for (auto& p : gbestTimeline)
+            out << p.first << "," << p.second << "\n";
+        out << "END," << total_ms << "\n";
+        out.close();
+    }
 
     // copiar gbest para host cache
     if (d_gbest) {
         h_gbest_cache.resize(numSensors);
-        CUDA_CALL(cudaMemcpy(h_gbest_cache.data(), d_gbest, sizeof(double) * (size_t)numSensors, cudaMemcpyDeviceToHost));
+        CUDA_CALL(cudaMemcpy(h_gbest_cache.data(), d_gbest,
+            sizeof(double) * (size_t)numSensors,
+            cudaMemcpyDeviceToHost));
     }
 
     std::vector<int> sensorOffsets(numSensors + 1);
@@ -648,8 +826,8 @@ void ClusteringPSO_CUDA::run() {
         clusterRadiiHost
     );
 
-
     freeMemory();
 }
+
 
 #endif // USE_CUDA

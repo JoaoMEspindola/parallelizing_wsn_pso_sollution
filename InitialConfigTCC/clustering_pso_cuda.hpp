@@ -3,6 +3,8 @@
 
 #include <vector>
 #include "network.hpp"
+#include <chrono>
+
 
 #ifdef USE_CUDA
 
@@ -33,6 +35,7 @@ private:
     Network& net;
     const std::vector<int>& nextHopHost;
     const std::vector<double>& clusterRadiiHost;
+    std::vector<std::pair<double, double>> gbestTimeline;
 
     int swarmSize, iterations;
     int numSensors, numGateways;

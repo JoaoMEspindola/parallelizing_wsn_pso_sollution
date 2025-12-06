@@ -44,8 +44,7 @@ public:
                     // candidato a globalBest
                     if (fitness > globalBestFitness) {
                         globalBestFitness = fitness;
-						globalBest = p.position;
-				        std::cout << "[CPU] Iteration " << t + 1 << ", Particle Fitness: " << fitness << "\n";
+						globalBest = p.position;				        
                     }
                 }
             }           

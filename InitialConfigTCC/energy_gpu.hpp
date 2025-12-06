@@ -18,7 +18,7 @@ double distanceGPU(double x1, double y1, double x2, double y2) {
 __device__ __forceinline__
 double transmitEnergyGPU(double d) {
     const double E_elec = 50e-9;
-    const double E_amp = 100e-12;
+    const double E_amp = 10e-12;
     const double k = 4000.0;
     return (E_elec + E_amp * d * d) * k;
 }

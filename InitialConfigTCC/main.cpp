@@ -34,11 +34,14 @@ double measureTime(Func&& func) {
 // ======================================================
 int main() {
     // === PARÂMETROS BASEADOS NO ARTIGO ===
-    const int numSensors = 600;
-    const int numGateways = 60;
+    const int numSensors = 1200;
+    const int numGateways = 120;
     const double areaWidth = 500.0, areaHeight = 500.0;
-    const int swarmSize = 50;
-    const int iterations = 100;
+    const int swarmSize = 200;
+    const int iterations = 400;
+
+    int numBlocks_cluster = 8;
+    int swarmPerBlock_cluster = 64;
 
     // === GERA REDE ===
     Network net(numSensors, numGateways, areaWidth, areaHeight);
@@ -59,11 +62,11 @@ int main() {
     std::vector<double> approxLifetimeCPU, approxLifetimeGPU_thread, approxLifetimeGPU_block;
 
     // ---- CPU PSO ----
-    double cpuTime_r = measureTime([&]() {
+    /*double cpuTime_r = measureTime([&]() {
         RoutingPSO rPSO_cpu(net, swarmSize, iterations);
         nextHopCPU = rPSO_cpu.optimizeRouting();
         approxLifetimeCPU = rPSO_cpu.getApproxLifetime();
-        });
+        });*/
 
 #ifdef USE_CUDA
     // ---- GPU PSO (thread-per-particle) ----
@@ -76,26 +79,32 @@ int main() {
 
     // ---- GPU PSO (block-per-swarm) ----
     double gpuTime_block = measureTime([&]() {
-        RoutingPSO_Block_CUDA rPSO_block(net, swarmSize, iterations, 8); // 8 revoadas
+        RoutingPSO_Block_CUDA rPSO_block(net, swarmSize, iterations, numBlocks_cluster); // 8 revoadas
         rPSO_block.run();
         nextHopGPU_block = rPSO_block.decodeRoutingGBestToNextHop();
         approxLifetimeGPU_block = rPSO_block.getGBestHost();
         });
 
-    double speed_thread = cpuTime_r / gpuTime_thread;
-    double speed_block = cpuTime_r / gpuTime_block;
+    /*double speed_thread = cpuTime_r / gpuTime_thread;
+    double speed_block = cpuTime_r / gpuTime_block;*/
 
-    csv << "Routing," << cpuTime_r << "," << gpuTime_thread << ","
-        << gpuTime_block << "," << speed_thread << "," << speed_block << "\n";
+    csv << "Routing," 
+        //<< cpuTime_r
+        << "," << gpuTime_thread << ","
+        << gpuTime_block << ","
+        //<< speed_thread << "," << speed_block
+        << "\n";
 
-    std::cout << "[Routing PSO] CPU: " << cpuTime_r
+    std::cout
+        //<< "[Routing PSO] CPU: " << cpuTime_r
         << "s | GPU(Thread): " << gpuTime_thread
         << "s | GPU(Block): " << gpuTime_block
-        << "s | Speedup(Thread)=" << speed_thread
-        << "x | Speedup(Block)=" << speed_block << "x\n";
+        //<< "s | Speedup(Thread)=" << speed_thread
+        //<< "x | Speedup(Block)=" << speed_block
+        << "x\n";
 #else
-    csv << "Routing," << cpuTime_r << ",-,-,-,-\n";
-    std::cout << "[Routing PSO] CPU: " << cpuTime_r << "s\n";
+    /*csv << "Routing," << cpuTime_r << ",-,-,-,-\n";
+    std::cout << "[Routing PSO] CPU: " << cpuTime_r << "s\n";*/
 #endif
 
     // ======================================================
@@ -105,17 +114,18 @@ int main() {
 
     std::vector<int> sensorAssignmentCPU, sensorAssignmentGPU;
     std::vector<int> sensorAssignmentGPU_block; // ADICIONADO: resultado do block
-    std::vector<double> clusterRadiiCPU = computeClusterRadii(approxLifetimeCPU, 80.0);
+    //std::vector<double> clusterRadiiCPU = computeClusterRadii(approxLifetimeCPU, 80.0);
 
 #ifdef USE_CUDA
     std::vector<double> clusterRadiiGPU = computeClusterRadii(approxLifetimeGPU_thread, 80.0);
+    std::vector<double> clusterRadiiGPU_Block = computeClusterRadii(approxLifetimeGPU_block, 80.0);
 #endif
 
     // ---- CPU PSO ----
-    double cpuTime_c = measureTime([&]() {
+    /*double cpuTime_c = measureTime([&]() {
         ClusteringPSO cPSO_cpu(net, nextHopCPU, clusterRadiiCPU, swarmSize, iterations);
         sensorAssignmentCPU = cPSO_cpu.optimizeClustering();
-        });
+        });*/
 
 #ifdef USE_CUDA
     // ---- GPU PSO (thread-per-particle) ----
@@ -127,13 +137,12 @@ int main() {
             gbestVecGPU, net, nextHopGPU_thread, clusterRadiiGPU);
         });
 
-    double speedup_c_thread = cpuTime_c / gpuTime_c_thread;
+    //double speedup_c_thread = cpuTime_c / gpuTime_c_thread;
 
     // ------------------------------------------------------
     // ---- GPU (BLOCK-PER-SWARM) CLUSTERING PSO -------------
     // ------------------------------------------------------
-    int numBlocks_cluster = 8;               // número de revoadas (ajustável)
-    int swarmPerBlock_cluster = swarmSize / numBlocks_cluster;
+    
     if (swarmPerBlock_cluster < 1) {
         swarmPerBlock_cluster = 1;
         numBlocks_cluster = swarmSize;
@@ -153,47 +162,47 @@ int main() {
         std::vector<double> gbestBlock = cPSO_block.getGBestHost();
 
         sensorAssignmentGPU_block = decodeClusteringGBestToAssignment(
-            gbestBlock, net, nextHopGPU_thread, clusterRadiiGPU);
+            gbestBlock, net, nextHopGPU_block, clusterRadiiGPU_Block);
         });
 
-    double speedup_c_block = cpuTime_c / gpuTime_c_block;
+    //double speedup_c_block = cpuTime_c / gpuTime_c_block;
 
     // ---- EXPORTAÇÃO E PRINTS ----
     csv << "Clustering,"
-        << cpuTime_c << ","
+        //<< cpuTime_c << ","
         << gpuTime_c_thread << ","
-        << gpuTime_c_block << ","
-        << speedup_c_thread << ","
-        << speedup_c_block << "\n";
+        << gpuTime_c_block << ",";
+        //<< speedup_c_thread << ","
+        //<< speedup_c_block << "\n";
 
-    std::cout << "[Clustering PSO] CPU: " << cpuTime_c << "s"
+        std::cout
+        //<< "[Clustering PSO] CPU: " << cpuTime_c << "s"
         << " | GPU(Thread): " << gpuTime_c_thread << "s"
-        << " | GPU(Block): " << gpuTime_c_block << "s"
-        << " | Speedup(Thread)=" << speedup_c_thread << "x"
-        << " | Speedup(Block)=" << speedup_c_block << "x\n";
+        << " | GPU(Block): " << gpuTime_c_block << "s";
+        //<< " | Speedup(Thread)=" << speedup_c_thread << "x"
+        //<< " | Speedup(Block)=" << speedup_c_block << "x\n";
 
 #else
-    csv << "Clustering," << cpuTime_c << ",-,-,-,-\n";
-    std::cout << "[Clustering PSO] CPU: " << cpuTime_c << "s\n";
+    /*csv << "Clustering," << cpuTime_c << ",-,-,-,-\n";
+    std::cout << "[Clustering PSO] CPU: " << cpuTime_c << "s\n";*/
 #endif
 
     csv.close();
-    std::cout << "\n[Export] speedup_summary.csv salvo com sucesso!\n";
-
     // ======================================================
     // === SIMULAÇÃO =======================================
     // ======================================================
     std::cout << "\n========== SIMULAÇÃO ==========\n";
 
-    Network netCPU = net;
+    //Network netCPU = net;
 #ifdef USE_CUDA
     Network netGPU = net;
+    Network netGPU_block = net;
 #endif
 
     // ---- Simulação CPU ----
-    std::cout << "\n[Simulação CPU]\n";
+    /*std::cout << "\n[Simulação CPU]\n";
     Simulation simCPU(netCPU, nextHopCPU, sensorAssignmentCPU, 1.0);
-    simCPU.run(1000);
+    simCPU.run(1000);*/
 
 #ifdef USE_CUDA
     // ---- Simulação GPU(Thread) ----
@@ -203,7 +212,7 @@ int main() {
 
     // ---- Simulação GPU(Block) ----
     std::cout << "\n[Simulação GPU(Block)]\n";
-    Simulation simGPU_block(netGPU, nextHopGPU_block, sensorAssignmentGPU_block, 1.0);
+    Simulation simGPU_block(netGPU_block, nextHopGPU_block, sensorAssignmentGPU_block, 1.0);
     simGPU_block.run(1000);
 #endif
 

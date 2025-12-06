@@ -407,8 +407,6 @@ std::vector<int> RoutingPSO_Block_CUDA::decodeRoutingGBestToNextHop() const {
 }
 
 void RoutingPSO_Block_CUDA::run() {
-    std::cout << "[CUDA][BLOCK-PSO] Inicializando (" << numRevoadas << " revoadas, ppr=" << particlesPerRevoada << ")...\n";
-
     // build compact graph if needed (copied from your routing version)
     CompactGraphHost hostGraph = buildCompactGraph(net);
     graphDev.totalNodes = (int)hostGraph.h_nodes.size();
@@ -483,7 +481,6 @@ void RoutingPSO_Block_CUDA::run() {
         CUDA_CALL(cudaDeviceSynchronize());
 
         h_bestHistory.push_back(bestBlockFit);
-        if (it % 10 == 0) std::cout << "[CUDA][BLOCK-PSO] iter " << it << " best = " << bestBlockFit << "\n";
     }
 
     // export convergence
@@ -500,5 +497,4 @@ void RoutingPSO_Block_CUDA::run() {
         graphAllocated = false;
     }
     freeMemory();
-    std::cout << "[CUDA][BLOCK-PSO] Execução concluída.\n";
 }

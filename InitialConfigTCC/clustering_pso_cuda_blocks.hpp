@@ -12,6 +12,8 @@
 #include "cuda_common_kernels.hpp"
 #include "energy.hpp"
 #include "utils.hpp"
+#include <chrono>
+
 
 #define CUDA_CALL_BLOCK(x) do { cudaError_t e=(x); if(e!=cudaSuccess){ \
     std::cerr<<"CUDA ERROR: "<<cudaGetErrorString(e)<<" ("<<__FILE__<<":"<<__LINE__<<")\n"; exit(EXIT_FAILURE);} } while(0)
@@ -23,9 +25,9 @@ public:
     ClusteringPSO_CUDA_Block(Network& net_,
         const std::vector<int>& nextHopHost_,
         const std::vector<double>& clusterRadiiHost_,
-        int swarmPerBlock_ = 32,
-        int numBlocks_ = 6,
-        int iterations_ = 100);
+        int swarmPerBlock_,
+        int numBlocks_,
+        int iterations_);
 
     ~ClusteringPSO_CUDA_Block();
 
@@ -42,6 +44,7 @@ private:
     Network& net;
     const std::vector<int>& nextHopHost;
     const std::vector<double>& clusterRadiiHost;
+    std::vector<std::pair<double, double>> gbestTimeline;
 
     int swarmPerBlock;
     int numBlocks;

@@ -251,10 +251,6 @@ void RoutingPSO_CUDA::run() {
     // === CONVERTER REDE PARA LISTA COMPACTA ===
     CompactGraphHost hostGraph = buildCompactGraph(net);
 
-    std::cout << "[CUDA] Convertendo rede para formato compacto...\n";
-    std::cout << "Nós totais: " << hostGraph.h_nodes.size()
-              << " | Arestas totais: " << hostGraph.h_adjacency.size() << "\n";
-
     // === COPIAR GRAFO PARA GPU ===
     graphDev.totalNodes = static_cast<int>(hostGraph.h_nodes.size());
     graphDev.totalEdges = static_cast<int>(hostGraph.h_adjacency.size());
@@ -273,7 +269,6 @@ void RoutingPSO_CUDA::run() {
         sizeof(int) * graphDev.totalEdges, cudaMemcpyHostToDevice));
 
     graphAllocated = true;
-    std::cout << "[CUDA] Grafo copiado para GPU com sucesso.\n";
 
     // === ALOCA E INICIALIZA PARTÍCULAS ===
     allocateMemory();
@@ -294,14 +289,11 @@ void RoutingPSO_CUDA::run() {
     initCurandKernel<<<blocks, threads>>>(d_randStates, 1234UL, swarmSize);
     CUDA_CALL(cudaDeviceSynchronize());
 
-    std::cout << "[CUDA] curand states inicializados.\n";
-
     // === Histórico do melhor fitness ===
     std::vector<double> h_bestHistory;
     h_bestHistory.reserve(iterations);
 
     // === LOOP PRINCIPAL ===
-    std::cout << "[CUDA] Iniciando iterações do PSO paralelo...\n";
 
     for (int it = 0; it < iterations; ++it) {
         // (A) Avaliar o fitness de todas as partículas
@@ -388,8 +380,6 @@ void RoutingPSO_CUDA::run() {
     for (int i = 0; i < h_bestHistory.size(); ++i)
         csv << i << "," << h_bestHistory[i] << "\n";
     csv.close();
-
-    std::cout << "[CUDA] Curva de convergência salva em pso_convergence_gpu.csv\n";
 
     if (d_gbest) {
         h_gbest_cache.assign(numGateways, 0.0);

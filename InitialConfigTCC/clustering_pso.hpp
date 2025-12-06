@@ -7,6 +7,7 @@
 #include <limits>
 #include <cmath>
 #include <algorithm>
+#include <chrono>
 
 struct ClusteringParticle {
     std::vector<double> position;
@@ -31,6 +32,7 @@ public:
         initializeParticles();
         std::vector<double> bestHistory;
         bestHistory.reserve(iterations);
+        auto t0 = std::chrono::high_resolution_clock::now();
         for (int t = 0; t < iterations; ++t) {
             for (auto& p : swarm) {
                 double fitness = evaluate(p);
@@ -42,15 +44,30 @@ public:
                 if (fitness > globalBestFitness) {
                     globalBestFitness = fitness;
                     globalBest = p.position;
+
+                    auto tNow = std::chrono::high_resolution_clock::now();
+                    double ms = std::chrono::duration<double, std::milli>(tNow - t0).count();
+                    gbestTimeline.emplace_back(ms, globalBestFitness);
                 }
             }
             bestHistory.push_back(globalBestFitness);
             updateParticles();
         }
+        // depois de salvar timeline normal
+        auto tEnd = std::chrono::high_resolution_clock::now();
+        double total_ms = std::chrono::duration<double, std::milli>(tEnd - t0).count();
         std::ofstream csv("pso_convergence_cpu_clustering.csv");
         csv << "iteration,best_fitness\n";
         for (int i = 0; i < (int)bestHistory.size(); ++i)
             csv << i << "," << bestHistory[i] << "\n";
+
+        std::ofstream out("gbest_timeline_cpu.csv");
+        out << "time_ms,fitness\n";
+        for (auto& p : gbestTimeline)
+            out << p.first << "," << p.second << "\n";
+        out << "END," << total_ms << "\n";
+        out.close();
+
 
         std::vector<int> assignmentCPU = decodeParticle(globalBest);
 
@@ -76,6 +93,7 @@ private:
     std::vector<ClusteringParticle> swarm;
     std::vector<double> globalBest;
     double globalBestFitness = -1;
+    std::vector<std::pair<double, double>> gbestTimeline;
 
 	void initializeParticles() { // inicializa o enxame de partículas
         swarm.clear();
