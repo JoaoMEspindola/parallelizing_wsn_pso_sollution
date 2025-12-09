@@ -83,26 +83,6 @@ Visual Studio automatically calls `nvcc` behind the scenes using project configu
 
 ---
 
-## **Building with NVCC (Command Line)**
-
-Example manual build:
-
-```bash
-nvcc -O3 -arch=sm_61 -use_fast_math \
-    clustering_pso_cuda.cu clustering_pso_cuda_blocks.cu \
-    routing_pso_cuda.cu routing_pso_block_cuda.cu \
-    cuda_common_kernels.cu utils.cpp export.cpp main.cpp \
-    -o pso_wsn.exe
-```
-
-Recommended flags:
-
-* `-arch=sm_61` – targets Pascal GPUs
-* `-O3` – aggressive optimization
-* `-use_fast_math` – faster but approximate FP operations
-* `-lineinfo` – enables profiling with Nsight
-
----
 Output files (CSV) are generated into:
 
 ```
